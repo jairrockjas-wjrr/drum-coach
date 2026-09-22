@@ -1,0 +1,17 @@
+{
+  "name": "drum-coach",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "App de práctica de batería (PWA) — jazz, doble pedal, lectura y remates.",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host",
+    "iconos": "node herramientas/generar-iconos.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Drum Coach</title>
+
+    <!-- viewport-fit=cover: la app usa toda la pantalla del iPhone, incluida la zona
+         del notch/Dynamic Island. Las "safe areas" se respetan desde el CSS. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="description" content="Práctica de batería: metrónomo, lectura, jazz, doble pedal y remates." />
+    <meta name="theme-color" content="#0d0f13" />
+    <meta name="color-scheme" content="dark" />
+
+    <!-- iOS: al instalarla en la pantalla de inicio se abre sin barras de Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Drum Coach" />
+    <link rel="apple-touch-icon" href="/iconos/icono-180.png" />
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/iconos/icono-192.png" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
