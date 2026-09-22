@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Prueba de precisión del metrónomo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { background:#0d0f13; color:#f2f4f8; font-family:-apple-system,system-ui,sans-serif; padding:24px; }
+      button { font-size:18px; padding:14px 20px; border-radius:12px; border:1px solid #2c3240; background:#f2a33c; color:#241503; font-weight:700; }
+      table { border-collapse:collapse; margin-top:20px; font-variant-numeric:tabular-nums; }
+      td { padding:6px 16px 6px 0; }
+      td:first-child { color:#98a1b3; }
+      .mal { color:#ef6b6b; font-weight:700; }
+      .bien { color:#56c271; font-weight:700; }
+    </style>
+  </head>
+  <body>
+    <h1>Prueba de precisión</h1>
+    <p>
+      Mide dos cosas mientras el metrónomo corre: cuánto se aparta cada pulso del
+      instante ideal, y con cuánto margen se alcanzó a programar cada click
+      (si el margen llegara a 0, se oiría un tropiezo).
+    </p>
+    <button id="arrancar">Arrancar prueba (120 BPM, 4/4)</button>
+    <table>
+      <tr><td>Tiempo corriendo</td><td id="tiempo">—</td></tr>
+      <tr><td>Pulsos programados</td><td id="pulsos">—</td></tr>
+      <tr><td>Desviación máxima contra el ideal</td><td id="desvio">—</td></tr>
+      <tr><td>Margen mínimo de programación</td><td id="margen">—</td></tr>
+      <tr><td>Reloj de audio vs. reloj del sistema</td><td id="relojes">—</td></tr>
+      <tr><td>Veredicto</td><td id="veredicto">—</td></tr>
+    </table>
+
+    <script type="module">
+      import { desbloquearAudio } from '/src/audio/contexto.ts'
+      import { crearMotor } from '/src/metronomo/motor.ts'
+      import { CONFIG_POR_DEFECTO } from '/src/metronomo/tipos.ts'
+
+      const BPM = 120
+      const DURACION_PULSO = 60 / BPM
+
+      document.getElementById('arrancar').addEventListener('click', async (e) => {
+        e.target.disabled = true
+        e.target.textContent = 'Corriendo…'
+
+        const ctx = await desbloquearAudio()
+        const config = { ...CONFIG_POR_DEFECTO, bpm: BPM, volumen: 0.15, subdivision: 1 }
+        const motor = crearMotor(ctx, config)
+
+        let n = 0
+        let primero = null
+        let desvioMax = 0
+        let margenMin = Infinity
+        const inicioReloj = performance.now()
+        let inicioAudio = null
+
+        motor.alEvento((ev) => {
+          if (ev.subdivision !== 0) return
+          if (primero === null) {
+            primero = ev.cuando
+            inicioAudio = ctx.currentTime
+          }
+          // Instante en el que ese pulso debería caer si no hubiera error acumulado.
+          const ideal = primero + n * DURACION_PULSO
+          desvioMax = Math.max(desvioMax, Math.abs(ev.cuando - ideal))
+          margenMin = Math.min(margenMin, ev.cuando - ctx.currentTime)
+          n++
+        })
+
+        motor.iniciar()
+
+        setInterval(() => {
+          const segundos = (performance.now() - inicioReloj) / 1000
+          const derivaRelojes = ctx.currentTime - inicioAudio - segundos
+          document.getElementById('tiempo').textContent = segundos.toFixed(1) + ' s'
+          document.getElementById('pulsos').textContent = n
+          document.getElementById('desvio').textContent = (desvioMax * 1000).toFixed(4) + ' ms'
+          document.getElementById('margen').textContent = (margenMin * 1000).toFixed(1) + ' ms'
+          document.getElementById('relojes').textContent = (derivaRelojes * 1000).toFixed(0) + ' ms'
+          const bien = desvioMax * 1000 < 1 && margenMin > 0
+          const v = document.getElementById('veredicto')
+          v.textContent = bien ? 'SIN DESFASE' : 'REVISAR'
+          v.className = bien ? 'bien' : 'mal'
+          // Resultado accesible para leerlo desde fuera.
+          window.__resultado = { segundos, pulsos: n, desvioMaxMs: desvioMax * 1000, margenMinMs: margenMin * 1000, derivaRelojesMs: derivaRelojes * 1000 }
+        }, 1000)
+      })
+    </script>
+  </body>
+</html>

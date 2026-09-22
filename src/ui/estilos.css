@@ -245,3 +245,208 @@ button {
 .detalle .estado {
   padding: 4px 0 12px;
 }
+
+/* =========================================================
+   Metrónomo
+   ========================================================= */
+
+/* --- Barra superior con el botón de volver --- */
+.barra {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.barra__volver {
+  min-height: 48px;
+  padding: 8px 14px 8px 8px;
+  background: none;
+  border: none;
+  color: var(--acento);
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.barra__titulo {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* --- Bloque de práctica --- */
+.practica {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bpm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bpm__paso {
+  min-width: 56px;
+  min-height: 56px;
+  border-radius: 14px;
+  border: 1px solid var(--borde);
+  background: var(--superficie-alta);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bpm__paso:active {
+  background: #2b3140;
+}
+
+.bpm__valor {
+  flex: 1;
+  text-align: center;
+  line-height: 1;
+}
+
+.bpm__valor strong {
+  display: block;
+  font-size: 64px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums; /* el número no baila al cambiar */
+  letter-spacing: -2px;
+}
+
+.bpm__valor small {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--texto-suave);
+  letter-spacing: 1px;
+}
+
+/* --- Deslizadores --- */
+.rango {
+  width: 100%;
+  height: 40px;
+  accent-color: var(--acento);
+  background: transparent;
+}
+
+/* --- Luces de los pulsos del compás --- */
+.pulsos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.pulso {
+  flex: 1 1 0;
+  min-width: 34px;
+  max-width: 64px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: var(--superficie-alta);
+  color: var(--texto-suave);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pulso--activo {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: #241503;
+}
+
+/* El 1 del compás se distingue aunque no esté sonando. */
+.pulso[data-pulso='0'] {
+  border-color: var(--acento-oscuro);
+}
+
+.acciones {
+  display: flex;
+  gap: 12px;
+}
+
+.acciones .boton--principal {
+  flex: 2;
+}
+
+.acciones #tap {
+  flex: 1;
+}
+
+.boton--parar {
+  background: var(--error);
+  border-color: #b64a4a;
+  color: #2a0a0a;
+}
+
+/* --- Campos de ajustes --- */
+.campos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 8px;
+}
+
+.campos--sangria {
+  padding-left: 14px;
+  border-left: 2px solid var(--borde);
+  margin: 2px 0 10px;
+}
+
+.campo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  flex-wrap: wrap;
+}
+
+.campo > span {
+  font-size: 16px;
+}
+
+.campo small {
+  display: block;
+  font-size: 13px;
+  color: var(--texto-suave);
+  font-weight: 400;
+}
+
+.campo--apagado {
+  opacity: 0.45;
+}
+
+.campo select,
+.campo input[type='number'] {
+  min-height: 48px;
+  min-width: 96px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: var(--superficie-alta);
+  color: var(--texto);
+  font-size: 17px;
+}
+
+.campo input[type='checkbox'] {
+  width: 30px;
+  height: 30px;
+  accent-color: var(--acento);
+}
+
+/* Los deslizadores ocupan todo el ancho, debajo de su etiqueta. */
+.campo .rango {
+  flex-basis: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}

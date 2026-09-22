@@ -21,14 +21,25 @@ interface Linea {
   detalle: string
 }
 
-// Módulos que llegan en las siguientes fases (se muestran apagados).
-const PROXIMOS = [
-  ['Metrónomo', 'Fase 2 · tap tempo, swing, 2 y 4, entrenador de velocidad'],
-  ['Ejercicios con partitura', 'Fase 3 · se ven y se escuchan'],
-  ['Lectura desde cero', 'Fase 4 · del pentagrama a los tresillos'],
-  ['Jazz', 'Fase 5 · ride, comping e independencia'],
-  ['Doble pedal', 'Fase 6 · velocidad y resistencia'],
-  ['Generador de remates', 'Fase 7 · fills nuevos cada vez'],
+// Módulos de la app. Los que todavía no existen se muestran apagados.
+interface Modulo {
+  nombre: string
+  nota: string
+  /** Dirección interna; si falta, el módulo aún no está hecho. */
+  ruta?: string
+}
+
+const MODULOS: Modulo[] = [
+  {
+    nombre: 'Metrónomo',
+    nota: 'tap tempo, swing, 2 y 4, entrenador de velocidad',
+    ruta: '#/metronomo',
+  },
+  { nombre: 'Ejercicios con partitura', nota: 'Fase 3 · se ven y se escuchan' },
+  { nombre: 'Lectura desde cero', nota: 'Fase 4 · del pentagrama a los tresillos' },
+  { nombre: 'Jazz', nota: 'Fase 5 · ride, comping e independencia' },
+  { nombre: 'Doble pedal', nota: 'Fase 6 · velocidad y resistencia' },
+  { nombre: 'Generador de remates', nota: 'Fase 7 · fills nuevos cada vez' },
 ]
 
 export function montarPantallaInicio(raiz: HTMLElement): void {
@@ -54,20 +65,24 @@ export function montarPantallaInicio(raiz: HTMLElement): void {
     </section>
 
     <section class="tarjeta">
-      <h2>Próximos módulos</h2>
-      <p class="nota">Todavía no están hechos: llegan en las siguientes fases.</p>
+      <h2>Módulos</h2>
+      <p class="nota">Los apagados todavía no están hechos: llegan en las siguientes fases.</p>
       <div class="modulos">
-        ${PROXIMOS.map(
-          ([nombre, nota]) => `
-          <button class="boton modulo" disabled>
-            <span>${nombre}</span>
-            <small>${nota}</small>
-          </button>`,
+        ${MODULOS.map((m) =>
+          m.ruta
+            ? `<a class="boton modulo modulo--listo" href="${m.ruta}">
+                 <span>${m.nombre}</span>
+                 <small>${m.nota}</small>
+               </a>`
+            : `<button class="boton modulo" disabled>
+                 <span>${m.nombre}</span>
+                 <small>${m.nota}</small>
+               </button>`,
         ).join('')}
       </div>
     </section>
 
-    <p class="pie">Versión 0.1 · Fase 1: base, PWA y publicación</p>
+    <p class="pie">Versión 0.2 · Fase 2: metrónomo</p>
   `
 
   const boton = raiz.querySelector<HTMLButtonElement>('#probar-audio')!
