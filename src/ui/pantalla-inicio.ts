@@ -11,6 +11,7 @@ import {
   pantallaBloqueada,
 } from '../sistema/wake-lock'
 import { estaInstalada } from '../sistema/pwa'
+import { esIOS } from '../sistema/dispositivo'
 
 type Nivel = 'ok' | 'aviso' | 'error' | 'neutro'
 
@@ -77,17 +78,20 @@ export function montarPantallaInicio(raiz: HTMLElement): void {
             : 'toca el botón de arriba (iOS solo permite audio tras un toque)',
       },
       {
-        nivel: admiteSesionDeAudio() ? 'ok' : 'aviso',
+        // Este punto solo importa en iPhone; en la computadora no hay interruptor.
+        nivel: !esIOS() ? 'neutro' : admiteSesionDeAudio() ? 'ok' : 'aviso',
         titulo: 'Interruptor de silencio',
-        detalle: admiteSesionDeAudio()
-          ? 'la app suena aunque el iPhone esté en silencio'
-          : 'tu iOS no admite esta función: sube el interruptor lateral o usa audífonos',
+        detalle: !esIOS()
+          ? 'solo aplica en el iPhone; aquí manda el volumen del sistema'
+          : admiteSesionDeAudio()
+            ? 'la app suena aunque el iPhone esté en silencio'
+            : 'tu iOS no admite esta función: sube el interruptor lateral o usa audífonos',
       },
       {
         nivel: admiteWakeLock() ? (pantallaBloqueada() ? 'ok' : 'neutro') : 'aviso',
         titulo: 'Pantalla encendida',
         detalle: !admiteWakeLock()
-          ? 'no disponible en este navegador: sube el bloqueo automático en Ajustes'
+          ? 'no disponible en este navegador: sube el tiempo de bloqueo automático'
           : pantallaBloqueada()
             ? 'la pantalla no se apagará mientras practicas'
             : 'se activará al empezar a practicar',
@@ -97,7 +101,9 @@ export function montarPantallaInicio(raiz: HTMLElement): void {
         titulo: 'Instalación',
         detalle: estaInstalada()
           ? 'abierta desde la pantalla de inicio'
-          : 'en Safari: Compartir → Agregar a inicio',
+          : esIOS()
+            ? 'en Safari: Compartir → Agregar a inicio'
+            : 'estás en el navegador; para instalarla, abre esta página en el iPhone',
       },
     ]
 
