@@ -52,6 +52,8 @@ export function montarMetronomo(raiz: HTMLElement, volver: () => void): () => vo
   let motor: Motor | null = null
   let contexto: AudioContext | null = null
   let animacion = 0
+  let bpmMostrado = config.bpm
+  let arrastrandoBpm = false
   const cola: EventoMetronomo[] = []
 
   raiz.innerHTML = `
@@ -260,10 +262,8 @@ export function montarMetronomo(raiz: HTMLElement, volver: () => void): () => vo
     }
     estadoPractica.textContent = partes.join(' · ')
 
-    if (evento.bpm !== Number(bpmNumero.textContent)) {
-      bpmNumero.textContent = String(evento.bpm)
-      bpmRango.value = String(evento.bpm)
-    }
+    // Solo el entrenador de velocidad puede mover el BPM por su cuenta.
+    if (config.entrenador.activo && evento.bpm !== bpmMostrado) mostrarBpm(evento.bpm)
   }
 
   // --- Sincronía pantalla/audio: los eventos se pintan cuando el audio los toca ---
@@ -298,16 +298,26 @@ export function montarMetronomo(raiz: HTMLElement, volver: () => void): () => vo
     $<HTMLElement>('campos-silencio').hidden = !config.silencio.activo
 
     dibujarPulsos()
-    motor?.actualizar(config)
+    motor?.actualizar(structuredClone(config))
     if (guardarCambios) guardar(CLAVE_GUARDADO, config)
   }
 
   function cambiarBpm(nuevo: number): void {
     config.bpm = Math.min(BPM_MAXIMO, Math.max(BPM_MINIMO, Math.round(nuevo)))
-    bpmNumero.textContent = String(config.bpm)
-    bpmRango.value = String(config.bpm)
-    motor?.actualizar(config)
+    mostrarBpm(config.bpm)
+    motor?.actualizar(structuredClone(config))
+    motor?.cambiarBpm(config.bpm)
     guardar(CLAVE_GUARDADO, config)
+  }
+
+  /**
+   * Escribe el BPM en pantalla. Mientras arrastras el deslizador no lo movemos
+   * por debajo: el número lo mandas tú, salvo cuando el entrenador sube solo.
+   */
+  function mostrarBpm(valor: number): void {
+    bpmMostrado = valor
+    bpmNumero.textContent = String(valor)
+    if (!arrastrandoBpm) bpmRango.value = String(valor)
   }
 
   // --- Empezar / detener ---
@@ -328,11 +338,11 @@ export function montarMetronomo(raiz: HTMLElement, volver: () => void): () => vo
     // El audio solo puede arrancar dentro del toque del usuario.
     contexto = await desbloquearAudio()
     if (!motor) {
-      motor = crearMotor(contexto, config)
+      motor = crearMotor(contexto, structuredClone(config))
       // Se encolan todas las notas (pulsos y subdivisiones) para iluminar el conteo.
       motor.alEvento((evento) => cola.push(evento))
     }
-    motor.actualizar(config)
+    motor.actualizar(structuredClone(config))
     motor.iniciar()
     botonTocar.textContent = 'Detener'
     botonTocar.classList.add('boton--parar')
@@ -369,6 +379,10 @@ export function montarMetronomo(raiz: HTMLElement, volver: () => void): () => vo
     boton.addEventListener('click', () => cambiarBpm(config.bpm + Number(boton.dataset.paso)))
   })
   bpmRango.addEventListener('input', () => cambiarBpm(Number(bpmRango.value)))
+  bpmRango.addEventListener('pointerdown', () => (arrastrandoBpm = true))
+  for (const evento of ['pointerup', 'pointercancel', 'blur']) {
+    bpmRango.addEventListener(evento, () => (arrastrandoBpm = false))
+  }
 
   $<HTMLSelectElement>('compas').addEventListener('change', (e) => {
     const etiqueta = (e.target as HTMLSelectElement).value

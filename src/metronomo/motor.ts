@@ -26,8 +26,14 @@ export interface Motor {
   iniciar(): void
   detener(): void
   estaSonando(): boolean
-  /** Cambia la configuración en caliente (el BPM entra en el siguiente pulso). */
+  /**
+   * Cambia la configuración en caliente. Recibe una copia, no el objeto de la
+   * pantalla: así el motor siempre sabe qué cambió y no se le escapa nada.
+   * No toca el tempo mientras suena; para eso está cambiarBpm().
+   */
   actualizar(config: ConfigMetronomo): void
+  /** Cambia el tempo mientras suena. Entra al empezar el siguiente pulso. */
+  cambiarBpm(nuevo: number): void
   configActual(): ConfigMetronomo
   /** BPM que suena ahora mismo (puede diferir del configurado por el entrenador). */
   bpmActual(): number
@@ -53,6 +59,9 @@ export function crearMotor(contexto: AudioContext, configInicial: ConfigMetronom
   let compasesDesdeSubida = 0
 
   const duracionPulso = (): number => 60 / bpm
+
+  const limitar = (valor: number): number =>
+    Math.min(BPM_MAXIMO, Math.max(BPM_MINIMO, Math.round(valor)))
 
   const enCuentaEntrada = (): boolean => entradaRestante > 0
 
@@ -141,7 +150,7 @@ export function crearMotor(contexto: AudioContext, configInicial: ConfigMetronom
     iniciar(): void {
       if (sonando) return
       sonando = true
-      bpm = Math.min(BPM_MAXIMO, Math.max(BPM_MINIMO, config.bpm))
+      bpm = limitar(config.bpm)
       bpmPendiente = null
       pulso = 0
       subdivision = 0
@@ -166,13 +175,16 @@ export function crearMotor(contexto: AudioContext, configInicial: ConfigMetronom
     estaSonando: () => sonando,
 
     actualizar(nueva: ConfigMetronomo): void {
-      const cambioBpm = nueva.bpm !== config.bpm
       config = nueva
-      if (!sonando) {
-        bpm = nueva.bpm
-      } else if (cambioBpm) {
-        bpmPendiente = Math.min(BPM_MAXIMO, Math.max(BPM_MINIMO, nueva.bpm))
-      }
+      // Mientras suena, el tempo solo cambia por cambiarBpm() o por el
+      // entrenador; así un ajuste cualquiera no borra la subida del entrenador.
+      if (!sonando) bpm = limitar(nueva.bpm)
+    },
+
+    cambiarBpm(nuevo: number): void {
+      const valor = limitar(nuevo)
+      if (sonando) bpmPendiente = valor
+      else bpm = valor
     },
 
     configActual: () => config,
