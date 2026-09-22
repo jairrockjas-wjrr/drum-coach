@@ -197,3 +197,51 @@ button {
   font-size: 13px;
   text-align: center;
 }
+
+/* --- Nota explicativa dentro de una tarjeta --- */
+.nota {
+  margin: 14px 0 0;
+  font-size: 15px;
+  color: var(--texto-suave);
+}
+
+.tarjeta h2 + .nota {
+  margin-top: -4px;
+  margin-bottom: 14px;
+}
+
+/* --- Desplegable de estado (informativo, cerrado por defecto) --- */
+.detalle {
+  margin-top: 14px;
+  border-top: 1px solid var(--borde);
+  padding-top: 6px;
+}
+
+.detalle summary {
+  /* Área de toque cómoda con baquetas en la mano */
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--texto-suave);
+  list-style: none;
+}
+
+.detalle summary::-webkit-details-marker {
+  display: none;
+}
+
+.detalle summary::before {
+  content: '▸';
+  margin-right: 8px;
+  transition: transform 0.15s ease;
+}
+
+.detalle[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.detalle .estado {
+  padding: 4px 0 12px;
+}

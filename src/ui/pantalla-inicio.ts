@@ -43,11 +43,19 @@ export function montarPantallaInicio(raiz: HTMLElement): void {
       <button class="boton boton--principal" id="probar-audio">
         Tocar para activar el sonido
       </button>
-      <ul class="estado" id="estado" style="margin-top:16px"></ul>
+      <p class="nota">
+        Listo: la app se usa aquí mismo, en el navegador. Instalarla en la pantalla
+        de inicio es opcional y solo sirve para abrirla más rápido y sin internet.
+      </p>
+      <details class="detalle">
+        <summary>Ver estado del sistema</summary>
+        <ul class="estado" id="estado"></ul>
+      </details>
     </section>
 
     <section class="tarjeta">
       <h2>Próximos módulos</h2>
+      <p class="nota">Todavía no están hechos: llegan en las siguientes fases.</p>
       <div class="modulos">
         ${PROXIMOS.map(
           ([nombre, nota]) => `
@@ -98,7 +106,7 @@ export function montarPantallaInicio(raiz: HTMLElement): void {
       },
       {
         nivel: estaInstalada() ? 'ok' : 'neutro',
-        titulo: 'Instalación',
+        titulo: 'Instalación (opcional)',
         detalle: estaInstalada()
           ? 'abierta desde la pantalla de inicio'
           : esIOS()
