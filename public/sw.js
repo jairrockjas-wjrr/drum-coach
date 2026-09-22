@@ -4,10 +4,13 @@
 // Estrategia:
 //  - Navegación (abrir la app): primero la red, y si no hay internet, la copia guardada.
 //    Así siempre ves la versión nueva al abrir con datos, pero funciona offline.
+//    Se pide con cache:'reload' para saltarse el caché del navegador: GitHub Pages
+//    manda el HTML con 10 minutos de vida y sin esto una versión recién publicada
+//    tardaba en aparecer aunque recargaras.
 //  - Resto de archivos del mismo origen (JS, CSS, íconos): primero la copia guardada
 //    (son archivos con hash en el nombre, nunca cambian), y si no está, se descarga y guarda.
 
-const VERSION = 'drum-coach-v1'
+const VERSION = 'drum-coach-v2'
 const BASE = new URL('./', self.registration.scope).pathname
 
 // Lo mínimo para que la app arranque sin internet.
@@ -47,7 +50,13 @@ self.addEventListener('fetch', (evento) => {
     evento.respondWith(
       (async () => {
         try {
-          const respuesta = await fetch(peticion)
+          let respuesta
+          try {
+            respuesta = await fetch(peticion.url, { cache: 'reload', credentials: 'same-origin' })
+          } catch {
+            // Safari viejo puede no admitir cache:'reload'; pedimos normal.
+            respuesta = await fetch(peticion)
+          }
           const cache = await caches.open(VERSION)
           cache.put(BASE, respuesta.clone())
           return respuesta
