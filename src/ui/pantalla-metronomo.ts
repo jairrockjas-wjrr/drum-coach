@@ -306,6 +306,9 @@ export function montarMetronomo(raiz: HTMLElement, volver: () => void): () => vo
     config.bpm = Math.min(BPM_MAXIMO, Math.max(BPM_MINIMO, Math.round(nuevo)))
     mostrarBpm(config.bpm)
     motor?.actualizar(structuredClone(config))
+    // Se vacía ANTES de cambiar el tempo: los pulsos que el motor va a cancelar
+    // no deben pintarse, pero los que programe enseguida sí.
+    cola.length = 0
     motor?.cambiarBpm(config.bpm)
     guardar(CLAVE_GUARDADO, config)
   }

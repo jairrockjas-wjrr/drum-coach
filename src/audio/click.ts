@@ -24,11 +24,14 @@ export interface OpcionesClick {
   volumen?: number
 }
 
-/** Programa un click para que suene en el instante indicado. */
+/**
+ * Programa un click para que suene en el instante indicado.
+ * Devuelve el oscilador para poder cancelarlo si el tempo cambia antes de que suene.
+ */
 export function programarClick(
   contexto: AudioContext,
   { cuando, tipo = 'pulso', volumen = 0.9 }: OpcionesClick,
-): void {
+): OscillatorNode {
   const sonido = SONIDOS[tipo]
 
   const oscilador = contexto.createOscillator()
@@ -52,6 +55,8 @@ export function programarClick(
     oscilador.disconnect()
     envolvente.disconnect()
   }
+
+  return oscilador
 }
 
 /**

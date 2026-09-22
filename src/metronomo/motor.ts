@@ -58,6 +58,23 @@ export function crearMotor(contexto: AudioContext, configInicial: ConfigMetronom
   let entradaRestante = 0
   let compasesDesdeSubida = 0
 
+  /** Clicks ya programados que todavía no han sonado (se pueden cancelar). */
+  let programados: { oscilador: OscillatorNode; cuando: number }[] = []
+
+  /**
+   * Foto del estado al empezar cada pulso. Sirve para recolocar la cuadrícula
+   * cuando cambias el tempo: se toma el último pulso que ya sonó y se cuenta
+   * la nueva distancia desde ahí.
+   */
+  interface Ancla {
+    inicio: number
+    pulso: number
+    compas: number
+    entradaRestante: number
+    compasesDesdeSubida: number
+  }
+  let anclas: Ancla[] = []
+
   const duracionPulso = (): number => 60 / bpm
 
   const limitar = (valor: number): number =>
@@ -120,16 +137,44 @@ export function crearMotor(contexto: AudioContext, configInicial: ConfigMetronom
     tiempoEvento = tiempoPulso
   }
 
+  /** Silencia los clicks ya programados que todavía no han sonado. */
+  const cancelarFuturos = (ahora: number): void => {
+    for (const { oscilador, cuando } of programados) {
+      if (cuando <= ahora) continue
+      try {
+        // Detenerlo antes de su propio arranque hace que nunca llegue a sonar.
+        oscilador.stop(ahora)
+      } catch {
+        // Si ya había terminado, no hay nada que cancelar.
+      }
+    }
+    // Los cancelados ya no sirven; los pasados se limpian solos más adelante.
+    programados = programados.filter((p) => p.cuando <= ahora)
+  }
+
   /** Programa todos los clicks que caen dentro de la ventana de lookahead. */
   const revisar = (): void => {
-    const limite = contexto.currentTime + VENTANA_S
+    const ahora = contexto.currentTime
+    // Los clicks que ya sonaron dejan de interesarnos.
+    if (programados.length > 32) programados = programados.filter((p) => p.cuando > ahora)
+    const limite = ahora + VENTANA_S
     while (sonando && tiempoEvento < limite) {
       const entrada = enCuentaEntrada()
       const tipo = tipoDeClick(config, pulso, subdivision, entrada)
       const suena = compasSuena() && tipo !== null
 
       if (suena && tipo) {
-        programarClick(contexto, { cuando: tiempoEvento, tipo, volumen: config.volumen })
+        const oscilador = programarClick(contexto, {
+          cuando: tiempoEvento,
+          tipo,
+          volumen: config.volumen,
+        })
+        programados.push({ oscilador, cuando: tiempoEvento })
+      }
+
+      if (subdivision === 0) {
+        anclas.push({ inicio: tiempoEvento, pulso, compas, entradaRestante, compasesDesdeSubida })
+        if (anclas.length > 4) anclas.shift()
       }
 
       escucha?.({
@@ -183,8 +228,45 @@ export function crearMotor(contexto: AudioContext, configInicial: ConfigMetronom
 
     cambiarBpm(nuevo: number): void {
       const valor = limitar(nuevo)
-      if (sonando) bpmPendiente = valor
-      else bpm = valor
+      if (!sonando) {
+        bpm = valor
+        return
+      }
+
+      // El cambio tiene que oírse ya, no al pulso siguiente: los pulsos se
+      // programan con 100 ms de adelanto, así que esperar significaba
+      // aguantar dos golpes (a 30 BPM, cuatro segundos).
+      const ahora = contexto.currentTime
+      const ancla = [...anclas].reverse().find((a) => a.inicio <= ahora)
+      if (!ancla) {
+        // Todavía no ha sonado ningún pulso: basta con dejarlo preparado.
+        bpmPendiente = valor
+        return
+      }
+
+      cancelarFuturos(ahora)
+      bpm = valor
+      bpmPendiente = null
+
+      // Volvemos al último pulso que ya sonó y medimos desde ahí la nueva
+      // distancia, para no perder el lugar dentro del compás.
+      pulso = ancla.pulso
+      compas = ancla.compas
+      entradaRestante = ancla.entradaRestante
+      compasesDesdeSubida = ancla.compasesDesdeSubida
+      tiempoPulso = ancla.inicio
+      subdivision = fraccionesDelPulso(config.subdivision, config.swing).length - 1
+      avanzar() // calcula el pulso siguiente ya con el tempo nuevo
+
+      // Si al acelerar ese pulso quedó en el pasado, suena enseguida.
+      const margen = ahora + 0.02
+      if (tiempoEvento < margen) {
+        tiempoPulso = margen
+        tiempoEvento = margen
+      }
+
+      anclas = []
+      revisar()
     },
 
     configActual: () => config,
