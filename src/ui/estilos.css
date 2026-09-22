@@ -284,11 +284,12 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .bpm__paso {
-  min-width: 56px;
+  flex: none;
+  min-width: 50px;
   min-height: 56px;
   border-radius: 14px;
   border: 1px solid var(--borde);
@@ -303,14 +304,17 @@ button {
 }
 
 .bpm__valor {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 6px;
   text-align: center;
   line-height: 1;
 }
 
 .bpm__valor strong {
   display: block;
-  font-size: 64px;
+  /* Se encoge en pantallas angostas para que quepan 3 cifras y los 4 botones. */
+  font-size: clamp(40px, 13vw, 64px);
   font-weight: 700;
   font-variant-numeric: tabular-nums; /* el número no baila al cambiar */
   letter-spacing: -2px;
@@ -332,39 +336,66 @@ button {
   background: transparent;
 }
 
-/* --- Luces de los pulsos del compás --- */
+/* --- Conteo del compás ---
+   Bolita grande = pulso (con su número); bolita chica = subdivisión (con su
+   sílaba). La separación entre bolitas es proporcional al tiempo real, así que
+   el swing se ve, no solo se oye. */
 .pulsos {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px 14px;
   justify-content: center;
+  align-items: center;
+  min-height: 52px;
 }
 
-.pulso {
-  flex: 1 1 0;
-  min-width: 34px;
-  max-width: 64px;
-  height: 46px;
+.grupo {
+  display: flex;
+  align-items: center;
+}
+
+.marca {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  flex: none;
+  border-radius: 50%;
   border: 1px solid var(--borde);
   background: var(--superficie-alta);
   color: var(--texto-suave);
-  font-size: 15px;
+  transition: background 0.05s linear, color 0.05s linear;
+}
+
+.marca--pulso {
+  width: 46px;
+  height: 46px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.marca--sub {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
   font-weight: 600;
 }
 
-.pulso--activo {
+.marca--activa {
   background: var(--acento);
   border-color: var(--acento);
   color: #241503;
 }
 
 /* El 1 del compás se distingue aunque no esté sonando. */
-.pulso[data-pulso='0'] {
+.grupo:first-child .marca--pulso {
   border-color: var(--acento-oscuro);
+}
+
+.leyenda {
+  margin: -6px 0 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--texto-suave);
 }
 
 .acciones {

@@ -4,6 +4,7 @@
 
 import { desbloquearAudio } from '../audio/contexto'
 import { crearMotor, type Motor } from '../metronomo/motor'
+import { fraccionesDelPulso } from '../metronomo/patron'
 import {
   BPM_MAXIMO,
   BPM_MINIMO,
@@ -18,6 +19,33 @@ import { guardar, leer } from '../datos/preferencias'
 import { mantenerPantallaEncendida, soltarPantalla } from '../sistema/wake-lock'
 
 const CLAVE_GUARDADO = 'metronomo'
+
+/**
+ * Cómo se cuenta en voz alta cada subdivisión. La primera casilla es el pulso
+ * (ahí va el número del tiempo), las demás son las sílabas de en medio.
+ * Es el sistema "1 e y a" para semicorcheas y "1 la li" para tresillos.
+ */
+const CONTEOS: Record<Subdivision, string[]> = {
+  1: [''],
+  2: ['', 'y'],
+  3: ['', 'la', 'li'],
+  4: ['', 'e', 'y', 'a'],
+  6: ['', 'la', 'li', 'y', 'la', 'li'],
+}
+
+/** Con más bolitas que esto no caben en la pantalla: se muestran solo los pulsos. */
+const MAXIMO_MARCAS = 32
+
+/**
+ * Píxeles que representa un pulso completo al separar las bolitas.
+ * Con pocas notas por pulso se usa más espacio, para que el corrimiento del
+ * swing se vea bien; con muchas se aprieta para que quepan en la pantalla.
+ */
+function espacioPorPulso(subdivision: Subdivision): number {
+  if (subdivision <= 2) return 62
+  if (subdivision === 3) return 44
+  return 30
+}
 
 export function montarMetronomo(raiz: HTMLElement, volver: () => void): () => void {
   let config = leer<ConfigMetronomo>(CLAVE_GUARDADO, CONFIG_POR_DEFECTO)
@@ -49,6 +77,7 @@ export function montarMetronomo(raiz: HTMLElement, volver: () => void): () => vo
              aria-label="Velocidad en BPM" />
 
       <div class="pulsos" id="pulsos"></div>
+      <p class="leyenda" id="leyenda-conteo"></p>
 
       <div class="acciones">
         <button class="boton boton--principal" id="tocar">Empezar</button>
@@ -164,18 +193,59 @@ export function montarMetronomo(raiz: HTMLElement, volver: () => void): () => vo
   const botonTocar = $<HTMLButtonElement>('tocar')
   const estadoPractica = $<HTMLElement>('estado-practica')
 
-  // --- Dibujo de los pulsos del compás ---
+  // --- Dibujo del conteo del compás ---
+  // Bolita grande = pulso (lleva el número del tiempo).
+  // Bolita chica = subdivisión, con la sílaba con que se cuenta.
+  // La separación entre bolitas es proporcional al tiempo real que hay entre
+  // ellas, así que con swing la sílaba de en medio se ve correrse hacia la derecha.
   function dibujarPulsos(): void {
-    pulsosCaja.innerHTML = Array.from(
-      { length: config.compas.pulsos },
-      (_, i) => `<span class="pulso" data-pulso="${i}">${i + 1}</span>`,
-    ).join('')
+    const fracciones = fraccionesDelPulso(config.subdivision, config.swing)
+    const conteo = CONTEOS[config.subdivision]
+    const caben = config.compas.pulsos * fracciones.length <= MAXIMO_MARCAS
+
+    pulsosCaja.innerHTML = Array.from({ length: config.compas.pulsos }, (_, pulso) => {
+      const marcas = caben
+        ? fracciones
+            .map((fraccion, sub) => {
+              const separacion =
+                sub === 0 ? 0 : (fraccion - fracciones[sub - 1]) * espacioPorPulso(config.subdivision)
+              const clase = sub === 0 ? 'marca marca--pulso' : 'marca marca--sub'
+              const texto = sub === 0 ? String(pulso + 1) : conteo[sub]
+              return `<span class="${clase}" data-pulso="${pulso}" data-sub="${sub}"
+                            style="margin-left:${separacion.toFixed(1)}px">${texto}</span>`
+            })
+            .join('')
+        : `<span class="marca marca--pulso" data-pulso="${pulso}" data-sub="0">${pulso + 1}</span>`
+      return `<div class="grupo">${marcas}</div>`
+    }).join('')
+
+    // Debajo, el conteo escrito para leerlo mientras tocas.
+    const leyenda = raiz.querySelector<HTMLElement>('#leyenda-conteo')
+    if (leyenda) {
+      if (config.subdivision === 1) {
+        leyenda.textContent = ''
+      } else if (caben) {
+        leyenda.textContent = `Se cuenta: 1 ${conteo.slice(1).join(' ')} · 2 ${conteo
+          .slice(1)
+          .join(' ')} …`
+      } else {
+        leyenda.textContent = 'Son demasiadas notas para dibujarlas: se marcan solo los pulsos.'
+      }
+    }
   }
 
   function pintarPulso(evento: EventoMetronomo): void {
-    pulsosCaja.querySelectorAll('.pulso').forEach((p) => p.classList.remove('pulso--activo'))
-    const actual = pulsosCaja.querySelector(`[data-pulso="${evento.pulso}"]`)
-    actual?.classList.add('pulso--activo')
+    const actual = pulsosCaja.querySelector(
+      `[data-pulso="${evento.pulso}"][data-sub="${evento.subdivision}"]`,
+    )
+    // Si esa bolita no está dibujada (compás muy lleno), dejamos encendida la anterior.
+    if (actual) {
+      pulsosCaja.querySelectorAll('.marca--activa').forEach((m) => m.classList.remove('marca--activa'))
+      actual.classList.add('marca--activa')
+    }
+
+    // El texto de estado solo cambia una vez por pulso.
+    if (evento.subdivision !== 0) return
 
     const partes: string[] = []
     if (evento.enCuentaEntrada) partes.push('Cuenta de entrada…')
@@ -248,7 +318,7 @@ export function montarMetronomo(raiz: HTMLElement, volver: () => void): () => vo
       cola.length = 0
       botonTocar.textContent = 'Empezar'
       botonTocar.classList.remove('boton--parar')
-      pulsosCaja.querySelectorAll('.pulso').forEach((p) => p.classList.remove('pulso--activo'))
+      pulsosCaja.querySelectorAll('.marca--activa').forEach((m) => m.classList.remove('marca--activa'))
       estadoPractica.textContent = ''
       void soltarPantalla()
       sessionStorage.setItem('drum-coach:pantalla-encendida', 'no')
@@ -259,10 +329,8 @@ export function montarMetronomo(raiz: HTMLElement, volver: () => void): () => vo
     contexto = await desbloquearAudio()
     if (!motor) {
       motor = crearMotor(contexto, config)
-      motor.alEvento((evento) => {
-        // Para la pantalla basta con los pulsos, no las subdivisiones.
-        if (evento.subdivision === 0) cola.push(evento)
-      })
+      // Se encolan todas las notas (pulsos y subdivisiones) para iluminar el conteo.
+      motor.alEvento((evento) => cola.push(evento))
     }
     motor.actualizar(config)
     motor.iniciar()
