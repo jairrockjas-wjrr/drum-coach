@@ -291,9 +291,12 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       return
     }
     if (evento.tipo === 'click') {
+      // Cuenta corrida: sigue 1, 2, 3, 4, 5… vuelta tras vuelta, y solo
+      // vuelve a empezar al darle a Stop.
+      const compasCorrido = evento.vuelta * ejercicio!.compases.length + evento.compas + 1
       const partes = [
         `${ejercicio!.compas.pulsos}/${ejercicio!.compas.figura}`,
-        `compás ${evento.compas + 1}`,
+        `compás ${compasCorrido}`,
       ]
       if (prefs.escucharYTocar) partes.push(evento.soloClick ? 'tu turno' : 'escucha')
       estado.textContent = partes.join(' · ')

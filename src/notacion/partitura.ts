@@ -363,7 +363,10 @@ export function dibujarPartitura(
           stave.addTimeSignature(`${ejercicio.compas.pulsos}/${ejercicio.compas.figura}`)
         }
       }
-      stave.setMeasure((i % ejercicio.compases.length) + 1)
+      // En la tira no se numeran los compases: como la música da vueltas, un
+      // número fijo mentiría a partir de la segunda. La cuenta corrida va en
+      // la línea de estado.
+      if (!unaLinea) stave.setMeasure(i + 1)
       stave.setContext(ctx).draw()
 
       const { voces, adornos, letreros, conTresillos } = armados[i]
