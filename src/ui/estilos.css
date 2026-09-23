@@ -1052,6 +1052,22 @@ a.barra__volver {
   font-size: 13px;
 }
 
+/* El cuadrado de parar ocupa su sitio siempre, suene o no: si apareciera y
+   desapareciera, el texto se movería a cada pulsación. */
+.figura__parar {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-right: 4px;
+  color: var(--acento);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.figura__caja--sonando .figura__parar {
+  opacity: 1;
+}
+
 /* Mientras suena se enciende, sin cambiar de tamaño para no mover la lista. */
 .figura__caja--sonando {
   border-color: var(--acento);

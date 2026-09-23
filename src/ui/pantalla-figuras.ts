@@ -13,6 +13,12 @@ import { leer } from '../datos/preferencias'
 
 const BPM = 60
 
+/** Cuadrado de parar, dibujado: con carácter (■) nunca queda centrado. */
+const ICONO_PARAR = `
+  <svg class="figura__parar" viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" />
+  </svg>`
+
 /** Un compás lleno de esa figura, para oír cuántas entran. */
 function compasLleno(figura: Figura): Nota[] {
   return Array.from({ length: cuantasEntran(figura) }, (_, i) => ({
@@ -22,20 +28,28 @@ function compasLleno(figura: Figura): Nota[] {
   }))
 }
 
-/** El mismo compás, pero alternando la figura con su silencio. */
-function compasConSilencios(figura: Figura): Nota[] {
-  const pares = cuantasEntran(figura) / 2
-  const notas: Nota[] = []
-  for (let i = 0; i < pares; i++) {
-    notas.push({ figura, piezas: ['tarola'], mano: i % 2 === 0 ? 'R' : 'L' })
-    notas.push({ figura, piezas: [] })
-  }
-  return notas
+/**
+ * El mismo compás lleno, pero con un hueco en medio: ahí va el silencio.
+ *
+ * Alternar golpe y silencio no servía: negra, silencio, negra, silencio suena
+ * exactamente igual que dos blancas, porque los golpes caen en el mismo sitio.
+ * Con el hueco metido dentro del chorro de notas sí se oye qué es un silencio:
+ * el click sigue corriendo y falta un golpe.
+ */
+function compasConHueco(figura: Figura): Nota[] {
+  const cuantas = cuantasEntran(figura)
+  // El tercero si los hay; si la figura solo entra dos veces, el segundo.
+  const hueco = Math.min(2, cuantas - 1)
+  return Array.from({ length: cuantas }, (_, i) =>
+    i === hueco
+      ? { figura, piezas: [] }
+      : { figura, piezas: ['tarola' as const], mano: i % 2 === 0 ? ('R' as const) : ('L' as const) },
+  )
 }
 
 /**
- * La redonda no cabe dos veces en un compás, así que su pareja de nota y
- * silencio ocupa dos compases: uno sonando y otro callado.
+ * La redonda llena el compás ella sola, así que no hay dónde meterle el hueco:
+ * su silencio son dos compases, uno sonando y otro callado con el click.
  */
 function ejercicioDeFigura(figura: Figura, conSilencios: boolean): Ejercicio {
   const compases =
@@ -46,7 +60,7 @@ function ejercicioDeFigura(figura: Figura, conSilencios: boolean): Ejercicio {
         ]
       : [
           {
-            manos: conSilencios ? compasConSilencios(figura) : compasLleno(figura),
+            manos: conSilencios ? compasConHueco(figura) : compasLleno(figura),
             pies: [],
           },
         ]
@@ -79,7 +93,11 @@ export function montarFiguras(raiz: HTMLElement): () => void {
     </header>
 
     <section class="tarjeta">
-      <p class="nota">Pulsa cualquier dibujo para escucharlo: suena un compás entero de esa figura con el click detrás.</p>
+      <p class="nota">
+        Pulsa cualquier dibujo para escucharlo: suena un compás entero de esa
+        figura con el click detrás. En los silencios falta un golpe en medio,
+        que es justo lo que hace un silencio. Vuelve a pulsar para parar.
+      </p>
       <div class="figuras">
         ${FIGURAS.map((f, i) => {
           const entran = cuantasEntran(f.figura)
@@ -93,10 +111,12 @@ export function montarFiguras(raiz: HTMLElement): () => void {
               <button class="figura__caja" type="button" data-figura="${i}" data-silencio="0">
                 <span class="figura__lienzo" id="lienzo-${i}"></span>
                 <small>${f.nombre}</small>
+                ${ICONO_PARAR}
               </button>
               <button class="figura__caja" type="button" data-figura="${i}" data-silencio="1">
                 <span class="figura__lienzo" id="silencio-${i}"></span>
                 <small>${f.nombreSilencio}</small>
+                ${ICONO_PARAR}
               </button>
             </div>
           </article>`
@@ -120,6 +140,7 @@ export function montarFiguras(raiz: HTMLElement): () => void {
             <button class="figura__caja" type="button" data-figura="3" data-silencio="0">
               <span class="figura__lienzo" id="unidas-corchea"></span>
               <small>Dos corcheas</small>
+              ${ICONO_PARAR}
             </button>
           </div>
         </article>
@@ -132,6 +153,7 @@ export function montarFiguras(raiz: HTMLElement): () => void {
             <button class="figura__caja" type="button" data-figura="4" data-silencio="0">
               <span class="figura__lienzo" id="unidas-semicorchea"></span>
               <small>Dos semicorcheas</small>
+              ${ICONO_PARAR}
             </button>
           </div>
         </article>
@@ -155,9 +177,15 @@ export function montarFiguras(raiz: HTMLElement): () => void {
   })()
 
   // --- Escuchar ---
+  // Temporizador que apaga la luz del botón cuando acaba el compás. Se guarda
+  // para poder cancelarlo si se para antes de tiempo.
+  let apagado: number | undefined
+
   const detener = (): void => {
     reproductor?.detener()
     reproductor = null
+    window.clearTimeout(apagado)
+    apagado = undefined
     for (const caja of raiz.querySelectorAll('.figura__caja--sonando')) {
       caja.classList.remove('figura__caja--sonando')
     }
@@ -189,15 +217,15 @@ export function montarFiguras(raiz: HTMLElement): () => void {
 
     // Se apaga solo al acabar el compás (o los dos de la redonda).
     const compases = ficha.figura === 'redonda' && conSilencios ? 2 : 1
-    window.setTimeout(
-      () => caja.classList.remove('figura__caja--sonando'),
-      (compases * 4 * 60_000) / BPM + 200,
-    )
+    apagado = window.setTimeout(detener, (compases * 4 * 60_000) / BPM + 200)
   }
 
   raiz.addEventListener('click', (evento) => {
     const caja = (evento.target as HTMLElement).closest<HTMLButtonElement>('.figura__caja')
-    if (caja) void escuchar(caja)
+    if (!caja) return
+    // Si ya está sonando ésa, el mismo botón la para.
+    if (caja.classList.contains('figura__caja--sonando')) detener()
+    else void escuchar(caja)
   })
 
   return detener
