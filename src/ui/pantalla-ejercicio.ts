@@ -78,15 +78,14 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
 
   raiz.innerHTML = `
     <header class="barra-ejercicio">
-      <a class="icono" href="#/ejercicios" aria-label="Volver a los ejercicios">‹</a>
+      <a class="icono icono--discreto" href="#/ejercicios" aria-label="Volver a los ejercicios">‹</a>
 
-      <div class="tempo">
-        <button class="tempo__paso" data-paso="-5">−5</button>
-        <button class="tempo__paso" data-paso="-1">−1</button>
-        <span class="tempo__valor"><strong id="bpm-numero">${bpm}</strong><small>BPM</small></span>
-        <button class="tempo__paso" data-paso="1">+1</button>
-        <button class="tempo__paso" data-paso="5">+5</button>
-      </div>
+      <button class="tocar" id="tocar" aria-label="Reproducir">▶</button>
+
+      <button class="chip-tempo" id="abrir-tempo" aria-label="Cambiar la velocidad">
+        <strong id="bpm-numero">${bpm}</strong>
+        <span>BPM</span>
+      </button>
 
       <button class="icono" id="loop" aria-label="Repetir en bucle" aria-pressed="${prefs.loop}">⟳</button>
       <button class="icono" id="abrir-ajustes" aria-label="Ajustes">⋯</button>
@@ -98,8 +97,32 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
 
     <footer class="pie-ejercicio">
       <p class="estado-ejercicio" id="estado">${ejercicio.descripcion}</p>
-      <button class="boton boton--principal" id="tocar">Reproducir</button>
     </footer>
+
+    <dialog class="panel" id="panel-tempo">
+      <div class="panel__barra">
+        <strong>Velocidad</strong>
+        <button class="icono" id="cerrar-tempo" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="panel__cuerpo">
+        <div class="bpm">
+          <button class="bpm__paso" data-paso="-5">−5</button>
+          <button class="bpm__paso" data-paso="-1">−1</button>
+          <div class="bpm__valor">
+            <strong id="bpm-grande">${bpm}</strong>
+            <small>sugerido ${ejercicio.bpmSugerido} BPM</small>
+          </div>
+          <button class="bpm__paso" data-paso="1">+1</button>
+          <button class="bpm__paso" data-paso="5">+5</button>
+        </div>
+        <input class="rango" type="range" id="bpm-rango" min="${BPM_MINIMO}" max="${BPM_MAXIMO}"
+               value="${bpm}" aria-label="Velocidad en BPM" />
+        <div class="acciones">
+          <button class="boton" id="tap">Tap tempo</button>
+          <button class="boton" id="sugerido">Volver al sugerido</button>
+        </div>
+      </div>
+    </dialog>
 
     <dialog class="panel" id="ajustes">
       <div class="panel__barra">
@@ -110,11 +133,6 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
         ${ejercicio.consejo ? `<p class="nota">💡 ${ejercicio.consejo}</p>` : ''}
 
         <div class="campos">
-          <label class="campo">
-            <span>Velocidad</span>
-            <input type="range" class="rango" id="bpm-rango" min="${BPM_MINIMO}" max="${BPM_MAXIMO}"
-                   value="${bpm}" aria-label="Velocidad en BPM" />
-          </label>
           <label class="campo campo--interruptor">
             <span>Click del metrónomo</span>
             <input type="checkbox" id="con-click" ${prefs.conClick ? 'checked' : ''} />
@@ -171,9 +189,11 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   const botonTocar = $<HTMLButtonElement>('tocar')
   const botonLoop = $<HTMLButtonElement>('loop')
   const bpmNumero = $<HTMLElement>('bpm-numero')
+  const bpmGrande = $<HTMLElement>('bpm-grande')
   const bpmRango = $<HTMLInputElement>('bpm-rango')
   const estado = $<HTMLElement>('estado')
   const panel = $<HTMLDialogElement>('ajustes')
+  const panelTempo = $<HTMLDialogElement>('panel-tempo')
 
   // --- Partitura ---
   // VexFlow se descarga aparte, solo al abrir un ejercicio.
@@ -262,8 +282,9 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     cancelAnimationFrame(animacion)
     cola.length = 0
     apagarCursor()
-    botonTocar.textContent = 'Reproducir'
-    botonTocar.classList.remove('boton--parar')
+    botonTocar.textContent = '▶'
+    botonTocar.setAttribute('aria-label', 'Reproducir')
+    botonTocar.classList.remove('tocar--parar')
     estado.textContent = ejercicio!.descripcion
     void soltarPantalla()
   }
@@ -275,16 +296,19 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     }
     contexto = await desbloquearAudio()
     if (!haySonidosReales()) {
-      botonTocar.textContent = 'Cargando la batería…'
       botonTocar.disabled = true
+      botonTocar.classList.add('tocar--cargando')
+      estado.textContent = 'Cargando la batería…'
       await cargarBateria(contexto)
+      botonTocar.classList.remove('tocar--cargando')
       botonTocar.disabled = false
     }
     reproductor = crearReproductor(contexto, ejercicio!, opcionesActuales())
     reproductor.alEvento((evento) => cola.push(evento))
     reproductor.iniciar()
-    botonTocar.textContent = 'Detener'
-    botonTocar.classList.add('boton--parar')
+    botonTocar.textContent = '■'
+    botonTocar.setAttribute('aria-label', 'Detener')
+    botonTocar.classList.add('tocar--parar')
     animacion = requestAnimationFrame(bucleVisual)
     const ok = await mantenerPantallaEncendida()
     sessionStorage.setItem('drum-coach:pantalla-encendida', ok ? 'si' : 'no')
@@ -293,6 +317,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   function cambiarBpm(nuevo: number): void {
     bpm = Math.min(BPM_MAXIMO, Math.max(BPM_MINIMO, Math.round(nuevo)))
     bpmNumero.textContent = String(bpm)
+    bpmGrande.textContent = String(bpm)
     bpmRango.value = String(bpm)
     cola.length = 0
     reproductor?.cambiarBpm(bpm)
@@ -320,10 +345,30 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     if (e.target === panel) panel.close()
   })
 
-  raiz.querySelectorAll<HTMLButtonElement>('.tempo__paso').forEach((boton) => {
+  raiz.querySelectorAll<HTMLButtonElement>('.bpm__paso').forEach((boton) => {
     boton.addEventListener('click', () => cambiarBpm(bpm + Number(boton.dataset.paso)))
   })
   bpmRango.addEventListener('input', () => cambiarBpm(Number(bpmRango.value)))
+
+  // --- Panel de velocidad ---
+  $<HTMLButtonElement>('abrir-tempo').addEventListener('click', () => panelTempo.showModal())
+  $<HTMLButtonElement>('cerrar-tempo').addEventListener('click', () => panelTempo.close())
+  panelTempo.addEventListener('click', (e) => {
+    if (e.target === panelTempo) panelTempo.close()
+  })
+  $<HTMLButtonElement>('sugerido').addEventListener('click', () => cambiarBpm(ejercicio!.bpmSugerido))
+
+  // Tap tempo: se marca el pulso a golpes y la app saca la velocidad.
+  let toques: number[] = []
+  $<HTMLButtonElement>('tap').addEventListener('click', () => {
+    const ahora = performance.now()
+    if (toques.length > 0 && ahora - toques[toques.length - 1] > 2500) toques = []
+    toques.push(ahora)
+    if (toques.length > 5) toques.shift()
+    if (toques.length < 2) return
+    const intervalos = toques.slice(1).map((t, i) => t - toques[i])
+    cambiarBpm(60000 / (intervalos.reduce((a, b) => a + b, 0) / intervalos.length))
+  })
 
   const casilla = (id: string, asignar: (valor: boolean) => void, redibujar = false): void => {
     $<HTMLInputElement>(id).addEventListener('change', (e) => {

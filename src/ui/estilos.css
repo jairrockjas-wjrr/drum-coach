@@ -591,29 +591,29 @@ a.barra__volver {
   overflow: hidden;
 }
 
-/* --- Barra de arriba: volver, tempo, loop y ajustes --- */
+/* --- Barra de arriba: volver, play, tempo, bucle y ajustes --- */
 .barra-ejercicio {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: calc(env(safe-area-inset-top) + 8px) calc(env(safe-area-inset-right) + 10px) 8px
-    calc(env(safe-area-inset-left) + 10px);
+  gap: 8px;
+  padding: calc(env(safe-area-inset-top) + 10px) calc(env(safe-area-inset-right) + 12px) 10px
+    calc(env(safe-area-inset-left) + 12px);
   background: var(--superficie);
   border-bottom: 1px solid var(--borde);
 }
 
 .icono {
   flex: none;
-  width: 42px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--superficie-alta);
   color: var(--texto);
-  font-size: 20px;
+  font-size: 19px;
   line-height: 1;
   text-decoration: none;
   cursor: pointer;
@@ -628,49 +628,75 @@ a.barra__volver {
   color: var(--acento);
 }
 
-.tempo {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 0;
+/* El botón de volver no compite con el resto. */
+.icono--discreto {
+  width: 34px;
+  border: none;
+  background: none;
+  color: var(--texto-suave);
+  font-size: 24px;
 }
 
-.tempo__paso {
+/* --- Play/stop, el botón que más se toca --- */
+.tocar {
   flex: none;
-  min-width: 36px;
-  padding: 0 2px;
-  height: 46px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: var(--acento);
+  color: #241503;
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.06s ease, background 0.15s ease;
+  /* El símbolo ▶ se ve descentrado si no se corrige. */
+  padding-left: 3px;
+}
+
+.tocar:active {
+  transform: scale(0.94);
+}
+
+.tocar--parar {
+  background: var(--error);
+  color: #2a0a0a;
+  padding-left: 0;
+}
+
+.tocar--cargando {
+  opacity: 0.5;
+}
+
+/* --- Chip del tempo: se toca y abre el panel de velocidad --- */
+.chip-tempo {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--superficie-alta);
-  font-size: 15px;
-  font-weight: 700;
+  color: var(--texto);
   cursor: pointer;
 }
 
-.tempo__paso:active {
+.chip-tempo:active {
   background: #2b3140;
 }
 
-.tempo__valor {
-  flex: 1;
-  min-width: 56px;
-  text-align: center;
-  line-height: 1;
-  padding: 0 2px;
-}
-
-.tempo__valor strong {
-  display: block;
-  font-size: clamp(22px, 7vw, 30px);
+.chip-tempo strong {
+  font-size: 26px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
 }
 
-.tempo__valor small {
-  display: block;
-  font-size: 10px;
+.chip-tempo span {
+  font-size: 11px;
   letter-spacing: 1px;
   color: var(--texto-suave);
 }
@@ -704,14 +730,14 @@ a.barra__volver {
 
 /* --- Pie: estado y el botón grande --- */
 .pie-ejercicio {
-  padding: 8px calc(env(safe-area-inset-right) + 14px) calc(env(safe-area-inset-bottom) + 12px)
+  padding: 10px calc(env(safe-area-inset-right) + 14px) calc(env(safe-area-inset-bottom) + 10px)
     calc(env(safe-area-inset-left) + 14px);
   background: var(--superficie);
   border-top: 1px solid var(--borde);
 }
 
 .pie-ejercicio .estado-ejercicio {
-  margin: 0 0 8px;
+  margin: 0;
   text-align: center;
 }
 
@@ -786,4 +812,18 @@ a.barra__volver {
   display: block;
   width: 100%;
   height: auto;
+}
+
+/* --- Panel de velocidad --- */
+#panel-tempo .bpm {
+  margin-top: 8px;
+}
+
+#panel-tempo .bpm__valor small {
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+#panel-tempo .acciones {
+  margin-top: 4px;
 }
