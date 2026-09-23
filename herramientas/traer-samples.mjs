@@ -15,86 +15,98 @@
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { leerIndice, traerArchivo } from './zip-remoto.mjs'
-import { comprimir, ecualizar, fundirFinal, nivelar, saturar } from './audio-dsp.mjs'
+import { acortar, afinar, comprimir, ecualizar, fundirFinal, nivelar, saturar } from './audio-dsp.mjs'
 
 const PACK = 'https://versilian-studios.com/Distro/Virtuosity_Drums_v0.925.zip'
 const DESTINO = new URL('../public/sonidos/', import.meta.url)
 const TEMPORAL = new URL('../.samples-tmp/', import.meta.url)
 
 /**
- * Receta de cada pieza. Además de elegir y mezclar micrófonos, aquí va el
- * procesado de estudio: ecualización, compresión y saturación. Los samples
- * crudos suenan a grabación de sala; esto es lo que los hace sonar a disco.
+ * Receta de cada pieza.
  *
- *  capas: micrófonos que se mezclan, con su peso. El primero manda: marca
- *         dónde empieza el golpe y da la definición. "room" es la sala.
+ * El pack es un kit de jazz: tambores chicos, afinados agudos y con mucha
+ * resonancia. Aquí se convierte en un kit de estudio más gordo y seco:
+ *
+ *  capas: micrófonos que se mezclan. El primero manda: marca dónde empieza el
+ *         golpe y da la definición. "room" es la sala.
  *  fuerza: qué capa de volumen del pack se usa (1 = el golpe más fuerte).
+ *  afinacion: por debajo de 1 baja el tono y engorda el tambor.
  *  eq: filtros en orden.
  *  compresor: pegada y sostenido.
+ *  puerta: apaga la resonancia (mantiene el golpe y corta la cola).
  *  saturacion: 0–1, cuerpo y carácter.
- *  nivel: volumen final dentro del kit (el equilibrio entre piezas).
- *  segundos: cuánto se conserva del golpe.
+ *  nivel: volumen final dentro del kit.
+ *  segundos: cuánto se recorta del original antes de procesar.
  */
 const PIEZAS = {
   bombo: {
     carpeta: 'kick',
     articulacion: 'snon',
-    capas: [['kickmic', 1], ['mid', 0.35]],
+    capas: [['kickmic', 1], ['mid', 0.3]],
     fuerza: 1,
+    afinacion: 0.86, // un bombo más grande
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 28 },
-      { tipo: 'graves', frecuencia: 65, db: 5 },
-      { tipo: 'pico', frecuencia: 380, q: 1.2, db: -5 }, // quita el "cartón"
-      { tipo: 'pico', frecuencia: 3800, q: 1.4, db: 4 }, // el golpe del parche
+      { tipo: 'pasaaltos', frecuencia: 25 },
+      { tipo: 'graves', frecuencia: 58, db: 8 }, // el "gordo"
+      { tipo: 'pico', frecuencia: 400, q: 1.1, db: -7 }, // fuera el cartón
+      { tipo: 'pico', frecuencia: 2600, q: 1.4, db: 2 }, // lo justo para oírlo
+      { tipo: 'agudos', frecuencia: 6000, db: -5 }, // menos agudo
     ],
-    compresor: { umbralDb: -16, ratio: 4, ataqueMs: 10, soltarMs: 140, compensarDb: 3 },
-    saturacion: 0.18,
-    nivel: 0.98,
+    compresor: { umbralDb: -16, ratio: 4, ataqueMs: 12, soltarMs: 120, compensarDb: 3 },
+    puerta: { mantenerMs: 85, caidaMs: 270 },
+    saturacion: 0.2,
+    nivel: 1,
     segundos: 0.9,
   },
   tarola: {
     carpeta: 'snare',
     articulacion: 'center',
-    capas: [['snaremic', 1], ['oh', 0.35], ['room', 0.18]],
+    capas: [['snaremic', 1], ['oh', 0.3], ['room', 0.12]],
     fuerza: 0.85,
+    afinacion: 0.93,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 90 },
-      { tipo: 'pico', frecuencia: 210, q: 1, db: 3 }, // cuerpo
-      { tipo: 'pico', frecuencia: 720, q: 1.2, db: -3 },
-      { tipo: 'agudos', frecuencia: 5500, db: 4 }, // el "crack"
+      { tipo: 'pasaaltos', frecuencia: 80 },
+      { tipo: 'pico', frecuencia: 185, q: 1, db: 4 }, // cuerpo
+      { tipo: 'pico', frecuencia: 850, q: 1.2, db: -4 },
+      { tipo: 'agudos', frecuencia: 6000, db: 1 }, // apenas un toque de crack
     ],
-    compresor: { umbralDb: -18, ratio: 4, ataqueMs: 4, soltarMs: 150, compensarDb: 3 },
+    compresor: { umbralDb: -18, ratio: 4, ataqueMs: 4, soltarMs: 120, compensarDb: 3 },
+    puerta: { mantenerMs: 65, caidaMs: 290 },
     saturacion: 0.22,
-    nivel: 0.9,
-    segundos: 0.95,
+    nivel: 0.92,
+    segundos: 0.9,
   },
   tarolaAro: {
     carpeta: 'snare',
     articulacion: 'rimshot',
-    capas: [['snaremic', 1], ['oh', 0.35], ['room', 0.2]],
+    capas: [['snaremic', 1], ['oh', 0.3], ['room', 0.14]],
     fuerza: 0.9,
+    afinacion: 0.93,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 100 },
-      { tipo: 'pico', frecuencia: 240, q: 1, db: 2 },
-      { tipo: 'pico', frecuencia: 4000, q: 1.3, db: 4 },
-      { tipo: 'agudos', frecuencia: 6000, db: 3 },
+      { tipo: 'pasaaltos', frecuencia: 90 },
+      { tipo: 'pico', frecuencia: 210, q: 1, db: 3 },
+      { tipo: 'pico', frecuencia: 3200, q: 1.3, db: 2 },
+      { tipo: 'agudos', frecuencia: 7000, db: -2 },
     ],
-    compresor: { umbralDb: -18, ratio: 5, ataqueMs: 2, soltarMs: 160, compensarDb: 3 },
+    compresor: { umbralDb: -18, ratio: 5, ataqueMs: 2, soltarMs: 130, compensarDb: 3 },
+    puerta: { mantenerMs: 70, caidaMs: 310 },
     saturacion: 0.25,
     nivel: 1,
-    segundos: 1.0,
+    segundos: 0.9,
   },
   aro: {
     carpeta: 'snare',
     articulacion: 'crossstick',
-    capas: [['snaremic', 1], ['oh', 0.25]],
+    capas: [['snaremic', 1], ['oh', 0.2]],
     fuerza: 0.8,
+    afinacion: 0.95,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 180 },
-      { tipo: 'pico', frecuencia: 1300, q: 1.2, db: 4 }, // la madera
-      { tipo: 'agudos', frecuencia: 6000, db: 2 },
+      { tipo: 'pasaaltos', frecuencia: 150 },
+      { tipo: 'pico', frecuencia: 900, q: 1.2, db: 4 }, // la madera
+      { tipo: 'agudos', frecuencia: 6500, db: -3 },
     ],
-    compresor: { umbralDb: -20, ratio: 3, ataqueMs: 3, soltarMs: 100, compensarDb: 2 },
+    compresor: { umbralDb: -20, ratio: 3, ataqueMs: 3, soltarMs: 90, compensarDb: 2 },
+    puerta: { mantenerMs: 25, caidaMs: 110 },
     saturacion: 0.15,
     nivel: 0.52,
     segundos: 0.6,
@@ -104,12 +116,14 @@ const PIEZAS = {
     articulacion: 'closed',
     capas: [['oh', 1], ['snaremic', 0.3]],
     fuerza: 0.8,
+    afinacion: 1,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 280 },
+      { tipo: 'pasaaltos', frecuencia: 260 },
       { tipo: 'pico', frecuencia: 1200, q: 1, db: -2 },
-      { tipo: 'agudos', frecuencia: 9000, db: 3 },
+      { tipo: 'agudos', frecuencia: 9000, db: -1 }, // sin estridencia
     ],
     compresor: { umbralDb: -22, ratio: 2.5, ataqueMs: 2, soltarMs: 80, compensarDb: 1.5 },
+    puerta: { mantenerMs: 30, caidaMs: 150 },
     saturacion: 0.1,
     nivel: 0.4,
     segundos: 0.45,
@@ -117,27 +131,31 @@ const PIEZAS = {
   hiHatAbierto: {
     carpeta: 'hh',
     articulacion: 'open',
-    capas: [['oh', 1], ['snaremic', 0.25], ['room', 0.12]],
+    capas: [['oh', 1], ['snaremic', 0.25], ['room', 0.1]],
     fuerza: 0.8,
+    afinacion: 1,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 260 },
-      { tipo: 'agudos', frecuencia: 8500, db: 3 },
+      { tipo: 'pasaaltos', frecuencia: 250 },
+      { tipo: 'agudos', frecuencia: 8500, db: 0 },
     ],
-    compresor: { umbralDb: -24, ratio: 2.5, ataqueMs: 3, soltarMs: 200, compensarDb: 1.5 },
+    compresor: { umbralDb: -24, ratio: 2.5, ataqueMs: 3, soltarMs: 180, compensarDb: 1.5 },
+    puerta: { mantenerMs: 260, caidaMs: 600 },
     saturacion: 0.1,
     nivel: 0.5,
-    segundos: 1.3,
+    segundos: 1.2,
   },
   hiHatPedal: {
     carpeta: 'hh',
     articulacion: 'pedal',
     capas: [['oh', 1], ['snaremic', 0.3]],
     fuerza: 0.8,
+    afinacion: 1,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 250 },
-      { tipo: 'agudos', frecuencia: 7000, db: 2 },
+      { tipo: 'pasaaltos', frecuencia: 220 },
+      { tipo: 'agudos', frecuencia: 7000, db: -2 },
     ],
     compresor: { umbralDb: -22, ratio: 3, ataqueMs: 2, soltarMs: 70, compensarDb: 1.5 },
+    puerta: { mantenerMs: 25, caidaMs: 130 },
     saturacion: 0.1,
     nivel: 0.3,
     segundos: 0.45,
@@ -145,14 +163,17 @@ const PIEZAS = {
   ride: {
     carpeta: 'ride',
     articulacion: 'ride',
-    capas: [['oh', 1], ['mid', 0.3], ['room', 0.12]],
+    capas: [['oh', 1], ['mid', 0.3], ['room', 0.1]],
     fuerza: 0.7,
+    afinacion: 1,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 220 },
-      { tipo: 'pico', frecuencia: 3200, q: 1.2, db: 3 }, // el "ping" de la baqueta
-      { tipo: 'agudos', frecuencia: 9500, db: 2.5 },
+      { tipo: 'pasaaltos', frecuencia: 200 },
+      { tipo: 'pico', frecuencia: 2800, q: 1.2, db: 2 }, // el "ping"
+      { tipo: 'agudos', frecuencia: 9500, db: 0 },
     ],
     compresor: { umbralDb: -24, ratio: 2.5, ataqueMs: 3, soltarMs: 220, compensarDb: 2 },
+    // Los platillos sí resuenan: solo se les recorta el final.
+    puerta: { mantenerMs: 900, caidaMs: 700 },
     saturacion: 0.12,
     nivel: 0.48,
     segundos: 1.8,
@@ -160,14 +181,16 @@ const PIEZAS = {
   campana: {
     carpeta: 'ride',
     articulacion: 'bell',
-    capas: [['oh', 1], ['mid', 0.3], ['room', 0.12]],
+    capas: [['oh', 1], ['mid', 0.3], ['room', 0.1]],
     fuerza: 0.8,
+    afinacion: 1,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 240 },
-      { tipo: 'pico', frecuencia: 2400, q: 1.5, db: 4 },
-      { tipo: 'agudos', frecuencia: 8000, db: 2 },
+      { tipo: 'pasaaltos', frecuencia: 220 },
+      { tipo: 'pico', frecuencia: 2200, q: 1.5, db: 3 },
+      { tipo: 'agudos', frecuencia: 8000, db: -1 },
     ],
     compresor: { umbralDb: -24, ratio: 3, ataqueMs: 3, soltarMs: 200, compensarDb: 2 },
+    puerta: { mantenerMs: 700, caidaMs: 600 },
     saturacion: 0.12,
     nivel: 0.56,
     segundos: 1.5,
@@ -175,15 +198,16 @@ const PIEZAS = {
   crash: {
     carpeta: 'crash',
     articulacion: 'crash',
-    capas: [['oh', 1], ['mid', 0.35], ['room', 0.22]],
+    capas: [['oh', 1], ['mid', 0.35], ['room', 0.2]],
     fuerza: 0.85,
+    afinacion: 1,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 160 },
+      { tipo: 'pasaaltos', frecuencia: 150 },
       { tipo: 'pico', frecuencia: 800, q: 1, db: -2 },
-      { tipo: 'agudos', frecuencia: 8000, db: 3 },
+      { tipo: 'agudos', frecuencia: 8000, db: 0 },
     ],
-    // Soltar largo: sostiene la cola del plato en vez de cortarla.
-    compresor: { umbralDb: -26, ratio: 2, ataqueMs: 5, soltarMs: 420, compensarDb: 2 },
+    compresor: { umbralDb: -26, ratio: 2, ataqueMs: 5, soltarMs: 400, compensarDb: 2 },
+    puerta: { mantenerMs: 1400, caidaMs: 900 },
     saturacion: 0.1,
     nivel: 0.78,
     segundos: 2.4,
@@ -191,33 +215,39 @@ const PIEZAS = {
   tomAgudo: {
     carpeta: 'htom',
     articulacion: 'center',
-    capas: [['mid', 1], ['oh', 0.45], ['room', 0.22]],
+    capas: [['mid', 1], ['oh', 0.4], ['room', 0.16]],
     fuerza: 0.85,
+    afinacion: 0.86, // tom más grande
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 55 },
-      { tipo: 'graves', frecuencia: 110, db: 4 }, // cuerpo
-      { tipo: 'pico', frecuencia: 430, q: 1.4, db: -6 }, // fuera el "cartón"
-      { tipo: 'pico', frecuencia: 4200, q: 1.3, db: 4 }, // ataque de la baqueta
+      { tipo: 'pasaaltos', frecuencia: 50 },
+      { tipo: 'graves', frecuencia: 100, db: 5 },
+      { tipo: 'pico', frecuencia: 420, q: 1.3, db: -8 }, // el cartón, fuera
+      { tipo: 'pico', frecuencia: 3200, q: 1.3, db: 2 }, // la baqueta, sin pasarse
+      { tipo: 'agudos', frecuencia: 6500, db: -4 },
     ],
-    compresor: { umbralDb: -20, ratio: 4, ataqueMs: 8, soltarMs: 250, compensarDb: 4 },
+    compresor: { umbralDb: -20, ratio: 4, ataqueMs: 8, soltarMs: 200, compensarDb: 4 },
+    puerta: { mantenerMs: 105, caidaMs: 400 },
     saturacion: 0.2,
-    nivel: 0.82,
+    nivel: 0.85,
     segundos: 1.3,
   },
   tomMedio: {
     carpeta: 'ltom',
     articulacion: 'center',
-    capas: [['mid', 1], ['oh', 0.45], ['room', 0.22]],
+    capas: [['mid', 1], ['oh', 0.4], ['room', 0.16]],
     fuerza: 0.85,
+    afinacion: 0.85,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 48 },
-      { tipo: 'graves', frecuencia: 95, db: 4 },
-      { tipo: 'pico', frecuencia: 380, q: 1.4, db: -6 },
-      { tipo: 'pico', frecuencia: 3800, q: 1.3, db: 4 },
+      { tipo: 'pasaaltos', frecuencia: 45 },
+      { tipo: 'graves', frecuencia: 85, db: 5 },
+      { tipo: 'pico', frecuencia: 380, q: 1.3, db: -8 },
+      { tipo: 'pico', frecuencia: 2800, q: 1.3, db: 2 },
+      { tipo: 'agudos', frecuencia: 6000, db: -4 },
     ],
-    compresor: { umbralDb: -20, ratio: 4, ataqueMs: 8, soltarMs: 300, compensarDb: 4 },
+    compresor: { umbralDb: -20, ratio: 4, ataqueMs: 8, soltarMs: 240, compensarDb: 4 },
+    puerta: { mantenerMs: 125, caidaMs: 500 },
     saturacion: 0.2,
-    nivel: 0.85,
+    nivel: 0.88,
     segundos: 1.5,
   },
 }
@@ -323,11 +353,15 @@ for (const [pieza, receta] of Object.entries(PIEZAS)) {
   // Primero se deja la mezcla a un nivel de trabajo, para que el compresor
   // encuentre la señal donde espera, y al final se pone el volumen del kit.
   let señal = nivelar(mezcla, 0.7)
+  señal = afinar(señal, receta.afinacion)
   señal = ecualizar(señal, receta.eq)
   señal = comprimir(señal, receta.compresor)
+  // La puerta va después del compresor: comprimir levanta la cola, y es
+  // justo esa cola la que hay que apagar para que el golpe suene seco.
+  señal = acortar(señal, receta.puerta)
   señal = saturar(señal, receta.saturacion)
   señal = nivelar(señal, receta.nivel)
-  señal = fundirFinal(señal, 0.05)
+  señal = fundirFinal(señal, 0.03)
 
   const wavFinal = new URL(`${pieza}.wav`, TEMPORAL)
   const m4a = new URL(`${pieza}.m4a`, DESTINO)
@@ -339,9 +373,9 @@ for (const [pieza, receta] of Object.entries(PIEZAS)) {
     pieza,
     origen: pistas[0].origen,
     micros: receta.capas.map(([m, p]) => `${m} ${Math.round(p * 100)} %`).join(' + '),
-    proceso: `${receta.eq.length} filtros · comp ${receta.compresor.ratio}:1 · sat ${Math.round(
-      receta.saturacion * 100,
-    )} %`,
+    proceso: `afinación ${receta.afinacion} · ${receta.eq.length} filtros · comp ${
+      receta.compresor.ratio
+    }:1 · puerta ${receta.puerta.mantenerMs}+${receta.puerta.caidaMs} ms`,
     duracion: largo / 44100,
     nivel: receta.nivel,
     tamano,
@@ -383,8 +417,11 @@ si todas se normalizaran al máximo, el hi-hat sonaría tan fuerte como el bombo
 Los samples crudos suenan a grabación de sala, no a disco. Cada pieza pasa por
 la misma cadena que usaría un ingeniero al mezclar: ecualización propia (quitar
 el "cartón" de los toms, sacar el golpe del bombo, el crack de la tarola),
-compresión para darle pegada y sostenido, y una pizca de saturación para
-redondear los picos. Está todo en \`herramientas/audio-dsp.mjs\`.
+compresión para darle pegada, una puerta que apaga la resonancia (el golpe
+suena seco, como un tambor con trapo) y una pizca de saturación. A los tambores
+se les baja además la afinación: el pack es un kit de jazz, con tambores chicos
+y agudos, y bajarlos los convierte en un kit más grande. Está todo en
+\`herramientas/audio-dsp.mjs\`.
 
 Todo acaba en mono 44,1 kHz y AAC (.m4a), que es lo que reproduce Safari en iPhone.
 

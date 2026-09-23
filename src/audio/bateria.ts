@@ -31,7 +31,9 @@ const ARCHIVOS: Record<Pieza, { archivo: string; velocidad?: number }> = {
   crash: { archivo: 'crash' },
   tomAgudo: { archivo: 'tomAgudo' },
   tomMedio: { archivo: 'tomMedio' },
-  tomPiso: { archivo: 'tomMedio', velocidad: 0.76 },
+  // El sample del tom grave ya viene con la afinación bajada, así que aquí
+  // basta con bajarla un poco más para el tom de piso.
+  tomPiso: { archivo: 'tomMedio', velocidad: 0.84 },
 }
 
 const sonidos = new Map<string, AudioBuffer>()

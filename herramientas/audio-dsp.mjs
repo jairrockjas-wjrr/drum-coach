@@ -139,3 +139,43 @@ export function ecualizar(muestras, bandas) {
   for (const banda of bandas) señal = filtrar(señal, banda)
   return señal
 }
+
+/**
+ * Baja (o sube) la afinación del tambor. factor < 1 lo hace más grave y más
+ * largo, que es lo que convierte un tambor chico de jazz en uno más gordo.
+ */
+export function afinar(muestras, factor) {
+  if (factor === 1) return muestras
+  const largo = Math.round(muestras.length / factor)
+  const salida = new Float32Array(largo)
+  for (let i = 0; i < largo; i++) {
+    const posicion = i * factor
+    const j = Math.floor(posicion)
+    const resto = posicion - j
+    const a = muestras[j] ?? 0
+    const b = muestras[j + 1] ?? 0
+    salida[i] = a * (1 - resto) + b * resto
+  }
+  return salida
+}
+
+/**
+ * Apaga la resonancia del tambor: mantiene el golpe y luego lo corta.
+ * Es lo mismo que ponerle un trapo o una puerta de ruido en el estudio,
+ * y es lo que hace que el golpe suene seco en vez de zumbar.
+ */
+export function acortar(muestras, { mantenerMs, caidaMs }) {
+  const mantener = Math.round((mantenerMs / 1000) * SR)
+  const caida = Math.round((caidaMs / 1000) * SR)
+  const total = Math.min(muestras.length, mantener + caida)
+  const salida = new Float32Array(total)
+  for (let i = 0; i < total; i++) {
+    let ganancia = 1
+    if (i > mantener) {
+      const avance = (i - mantener) / caida
+      ganancia = (1 - avance) * (1 - avance) // caída rápida, sin cola
+    }
+    salida[i] = muestras[i] * ganancia
+  }
+  return salida
+}
