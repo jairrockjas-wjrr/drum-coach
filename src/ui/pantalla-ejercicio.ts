@@ -63,7 +63,8 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   let contexto: AudioContext | null = null
   let animacion = 0
   let notas: NotaDibujada[] = []
-  let porClave = new Map<string, SVGElement>()
+  let porClave = new Map<string, NotaDibujada>()
+  let compasALaVista = -1
   const cola: EventoReproduccion[] = []
 
   const piezasUsadas = new Set<Pieza>()
@@ -206,16 +207,19 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     }
     const ancho = Math.max(280, lienzo.clientWidth - 16)
     const alto = Math.max(200, lienzo.clientHeight - 16)
+    // Vista de práctica: todos los compases en una tira que avanza de lado,
+    // en vez de saltar de renglón.
     notas = notacion.dibujarPartitura(hoja, ejercicio!, {
       ancho,
       alto,
+      unaLinea: true,
       mostrarSticking: prefs.mostrarSticking,
       mostrarConteo: prefs.mostrarConteo,
     })
     porClave = new Map()
-    for (const nota of notas) {
-      if (nota.elemento) porClave.set(`${nota.compas}-${nota.voz}-${nota.indice}`, nota.elemento)
-    }
+    for (const nota of notas) porClave.set(`${nota.compas}-${nota.voz}-${nota.indice}`, nota)
+    compasALaVista = -1
+    lienzo.scrollLeft = 0
   }
 
   async function pintarLeyenda(): Promise<void> {
@@ -240,16 +244,37 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       const partes = [`Compás ${evento.compas + 1}`]
       if (prefs.escucharYTocar) partes.push(evento.soloClick ? 'tu turno' : 'escucha')
       estado.textContent = partes.join(' · ')
+      if (evento.compas !== compasALaVista) {
+        compasALaVista = evento.compas
+        centrarCompas(evento.compas)
+      }
       return
     }
 
-    const elemento = porClave.get(`${evento.compas}-${evento.voz}-${evento.indice}`)
-    if (!elemento) return
+    const nota = porClave.get(`${evento.compas}-${evento.voz}-${evento.indice}`)
+    if (!nota?.elemento) return
+
     hoja
       .querySelectorAll(`.sonando[data-voz="${evento.voz}"]`)
       .forEach((el) => el.classList.remove('sonando'))
-    elemento.setAttribute('data-voz', evento.voz ?? '')
-    elemento.classList.add('sonando')
+
+    // Se encienden la nota y, con ella, su sticking y su conteo.
+    for (const parte of [nota.elemento, ...nota.letreros]) {
+      parte.setAttribute('data-voz', evento.voz ?? '')
+      parte.classList.add('sonando')
+    }
+  }
+
+  /** Desliza la tira para que el compás que suena quede a la vista. */
+  function centrarCompas(numero: number): void {
+    const primera = notas.find((n) => n.compas === numero && n.elemento)
+    if (!primera?.elemento) return
+    const caja = primera.elemento.getBoundingClientRect()
+    const marco = lienzo.getBoundingClientRect()
+    // Se deja el compás en el primer tercio: así se ve lo que viene después,
+    // que es lo que hace falta para leer a primera vista.
+    const objetivo = lienzo.scrollLeft + (caja.left - marco.left) - marco.width / 3
+    lienzo.scrollTo({ left: Math.max(0, objetivo), behavior: 'smooth' })
   }
 
   function bucleVisual(): void {

@@ -43,12 +43,19 @@ export interface NotaDibujada {
   /** Inicio de la nota en ticks desde el comienzo del ejercicio. */
   ticks: number
   elemento?: SVGElement
+  /** Sticking y conteo de esa nota, para encenderlos junto con ella. */
+  letreros: SVGElement[]
 }
 
 export interface OpcionesPartitura {
   ancho: number
   /** Alto disponible en pantalla. Si se indica, la música se agranda para llenarlo. */
   alto?: number
+  /**
+   * Todos los compases en una sola línea, que avanza de lado mientras suena.
+   * Es la vista de práctica: se lee como una tira, sin saltar de renglón.
+   */
+  unaLinea?: boolean
   mostrarSticking?: boolean
   mostrarConteo?: boolean
 }
@@ -114,6 +121,24 @@ function crearNotaVex(nota: Nota, voz: Voz): StaveNote | GhostNote {
   return vex
 }
 
+/** Crea un texto dentro del SVG de la partitura. */
+function crearTexto(
+  svg: SVGSVGElement,
+  x: number,
+  y: number,
+  texto: string,
+  clase: string,
+): SVGElement {
+  const elemento = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+  elemento.setAttribute('x', String(x))
+  elemento.setAttribute('y', String(y))
+  elemento.setAttribute('text-anchor', 'middle')
+  elemento.setAttribute('class', clase)
+  elemento.textContent = texto
+  svg.append(elemento)
+  return elemento
+}
+
 /** Agrupa los tresillos de tres en tres para dibujar su corchete. */
 function armarTresillos(notas: Nota[], vexNotas: (StaveNote | GhostNote)[]): Tuplet[] {
   const tresillos: Tuplet[] = []
@@ -143,7 +168,7 @@ export function dibujarPartitura(
 ): NotaDibujada[] {
   contenedor.innerHTML = ''
 
-  const { ancho, alto, mostrarSticking = true, mostrarConteo = true } = opciones
+  const { ancho, alto, unaLinea = false, mostrarSticking = true, mostrarConteo = true } = opciones
   const porPulso = ticksPorPulso(ejercicio.compas)
   const ticksCompas = ejercicio.compas.pulsos * porPulso
 
@@ -161,7 +186,7 @@ export function dibujarPartitura(
   interface CompasArmado {
     voces: Voice[]
     adornos: { setContext: (c: RenderContext) => { draw: () => void } }[]
-    letreros: { x: () => number; conteo: string; mano: string }[]
+    letreros: { indice: number; x: () => number; conteo: string; mano: string }[]
     minimo: number
     /** Lleva tresillos: su corchete ocupa el hueco de debajo del pentagrama. */
     conTresillos: boolean
@@ -184,12 +209,20 @@ export function dibujarPartitura(
         const vex = crearNotaVex(nota, voz)
         if (voz === 'manos') {
           letreros.push({
+            indice,
             x: () => vex.getAbsoluteX(),
             conteo: mostrarConteo ? conteoDeNota(nota, ticksEnCompas, porPulso) : '',
             mano: mostrarSticking && nota.mano && !esSilencio(nota) ? nota.mano : '',
           })
         }
-        dibujadas.push({ compas: i, voz, indice, ticks: ticksAcumulados + ticksEnCompas, vex })
+        dibujadas.push({
+          compas: i,
+          voz,
+          indice,
+          ticks: ticksAcumulados + ticksEnCompas,
+          letreros: [],
+          vex,
+        })
         ticksEnCompas += ticksDeNota(nota)
         return vex
       })
@@ -251,21 +284,32 @@ export function dibujarPartitura(
   }
 
   const opcionesReparto = [1, 2, 4].map(medir)
-  const porRenglon = alto
-    ? // El primero (menos compases por renglón = notas más grandes) que quepa de alto.
-      (opcionesReparto.find((o) => o.altoNecesario <= alto) ?? opcionesReparto[opcionesReparto.length - 1])
-        .cuantos
-    : ([4, 2, 1].find((cuantos) => anchoCompasNecesario * cuantos <= util * 1.2) ?? 1)
+  const porRenglon = unaLinea
+    ? ejercicio.compases.length // todo seguido, en una tira
+    : alto
+      ? // El primero (menos compases por renglón = notas más grandes) que quepa de alto.
+        (opcionesReparto.find((o) => o.altoNecesario <= alto) ??
+          opcionesReparto[opcionesReparto.length - 1]).cuantos
+      : ([4, 2, 1].find((cuantos) => anchoCompasNecesario * cuantos <= util * 1.2) ?? 1)
 
   const elegido = medir(porRenglon)
-  const { anchoCompasBase, renglones, anchoLienzo } = elegido
+  const renglones = elegido.renglones
+  // En la tira cada compás ocupa lo que necesita, sin estirarse a la pantalla.
+  const anchoCompasBase = unaLinea ? anchoCompasNecesario : elegido.anchoCompasBase
+  const anchoLienzo = unaLinea
+    ? MARGEN_IZQ * 2 + EXTRA_PRIMERO + anchoCompasBase * porRenglon
+    : elegido.anchoLienzo
 
   // Si sobra alto, los renglones se separan un poco y el bloque se centra,
   // para que la partitura ocupe la hoja sin quedar apretada arriba.
   let altoRenglon = ALTO_RENGLON
-  let altoLienzo = MARGEN_ARRIBA + renglones * altoRenglon + 16
+  // En la tira el lienzo se ajusta a la música (pentagrama + las dos filas de
+  // texto). Cuanto menos aire sobre, más grandes salen las notas en pantalla.
+  let altoLienzo = unaLinea
+    ? MARGEN_ARRIBA + 130
+    : MARGEN_ARRIBA + renglones * altoRenglon + 16
   let desplazamiento = 0
-  if (alto) {
+  if (alto && !unaLinea) {
     const disponible = alto / elegido.escala
     altoRenglon = Math.min(200, Math.max(ALTO_RENGLON, (disponible - MARGEN_ARRIBA - 16) / renglones))
     const usado = MARGEN_ARRIBA + renglones * altoRenglon + 16
@@ -310,23 +354,27 @@ export function dibujarPartitura(
       for (const voz of voces) voz.draw(ctx, stave)
       for (const adorno of adornos) adorno.setContext(ctx).draw()
 
-      // Filas de texto: primero el sticking, debajo el conteo.
+      // Filas de texto: primero el sticking, debajo el conteo. Se crean como
+      // elementos propios (no con fillText) para poder encenderlos con el
+      // cursor, igual que las notas.
       const yBase = stave.getYForLine(4) + (conTresillos ? 26 : 0)
-      ctx.save()
-      for (const letrero of letreros) {
-        const posX = letrero.x()
-        if (letrero.mano) {
-          ctx.setFont('system-ui, sans-serif', 11, 'bold')
-          ctx.setFillStyle('#1f2937')
-          ctx.fillText(letrero.mano, posX - 3, yBase + 32)
-        }
-        if (letrero.conteo) {
-          ctx.setFont('system-ui, sans-serif', 11, 'normal')
-          ctx.setFillStyle('#9aa3b2')
-          ctx.fillText(letrero.conteo, posX - 3, yBase + 49)
+      const svgHoja = contenedor.querySelector('svg')
+      if (svgHoja) {
+        for (const letrero of letreros) {
+          const posX = letrero.x()
+          const suya = dibujadas.find(
+            (n) => n.compas === i && n.voz === 'manos' && n.indice === letrero.indice,
+          )
+          if (letrero.mano) {
+            suya?.letreros.push(crearTexto(svgHoja, posX, yBase + 32, letrero.mano, 'letrero-mano'))
+          }
+          if (letrero.conteo) {
+            suya?.letreros.push(
+              crearTexto(svgHoja, posX, yBase + 49, letrero.conteo, 'letrero-conteo'),
+            )
+          }
         }
       }
-      ctx.restore()
 
       x += anchoCompas
     }
@@ -337,9 +385,22 @@ export function dibujarPartitura(
   const svg = contenedor.querySelector('svg')
   if (svg) {
     svg.setAttribute('viewBox', `0 0 ${anchoLienzo} ${altoLienzo}`)
-    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
-    svg.setAttribute('width', '100%')
+    svg.setAttribute('preserveAspectRatio', unaLinea ? 'xMinYMid meet' : 'xMidYMid meet')
+    svg.removeAttribute('width')
     svg.removeAttribute('height')
+
+    if (unaLinea) {
+      // El tamaño de la tira se ata a lo que se ve: se busca que entre un
+      // compás completo y un poco del siguiente, que es lo que hace falta para
+      // leer a primera vista. De ahí sale el alto, y el ancho por proporción.
+      const escala = ancho / (anchoCompasBase * 1.15)
+      const altura = Math.min((alto ?? 320) - 28, Math.max(140, altoLienzo * escala))
+      svg.style.height = `${Math.round(altura)}px`
+      svg.style.width = `${Math.round((altura * anchoLienzo) / altoLienzo)}px`
+    } else {
+      // Si hay varios renglones, manda el ancho y el alto sale solo.
+      svg.setAttribute('width', '100%')
+    }
   }
 
   // Ya dibujadas, rescatamos el elemento SVG de cada nota para poder

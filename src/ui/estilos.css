@@ -701,31 +701,39 @@ a.barra__volver {
   color: var(--texto-suave);
 }
 
-/* --- La partitura ocupa todo el hueco que queda --- */
+/* --- La partitura: una tira que se desliza de lado --- */
 .lienzo {
   flex: 1;
   min-height: 0;
   padding: 8px;
   display: flex;
-  overflow: auto;
+  align-items: center;
+  /* Solo se desliza en horizontal: la música va toda en un renglón. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .app--completa .hoja {
-  flex: 1;
   margin: 0;
+  /* La hoja mide lo que mide la música: si se deja encoger, el papel se queda
+     corto y las notas salen sobre el fondo oscuro. */
+  flex: none;
   display: flex;
-  /* El dibujo se estira a todo el hueco; el propio SVG centra la música
-     dentro (preserveAspectRatio), así las notas salen lo más grandes posible. */
-  align-items: stretch;
-  padding: 8px 4px;
+  align-items: center;
+  /* Tan ancha como la música, y nunca menos que la pantalla; de alto, lo
+     que ocupe la propia partitura. */
+  width: max-content;
+  min-width: 100%;
+  padding: 12px 14px;
   overflow: visible;
 }
 
 .app--completa .hoja svg {
-  flex: 1;
-  width: auto;
-  height: auto;
-  min-height: 0;
+  /* El tamaño lo calcula la propia partitura en píxeles (ver partitura.ts);
+     flex:none evita que la caja lo encoja para caber en la pantalla. */
+  flex: none;
+  max-width: none;
 }
 
 /* --- Pie: estado y el botón grande --- */
@@ -826,4 +834,22 @@ a.barra__volver {
 
 #panel-tempo .acciones {
   margin-top: 4px;
+}
+
+/* --- Sticking y conteo debajo de las notas --- */
+.letrero-mano {
+  font: 700 11px system-ui, -apple-system, sans-serif;
+  fill: #1f2937;
+}
+
+.letrero-conteo {
+  font: 400 11px system-ui, -apple-system, sans-serif;
+  fill: #9aa3b2;
+}
+
+/* Se encienden con su nota. */
+.hoja .letrero-mano.sonando,
+.hoja .letrero-conteo.sonando {
+  fill: var(--acento-oscuro);
+  font-weight: 700;
 }

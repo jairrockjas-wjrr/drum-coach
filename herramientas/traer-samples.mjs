@@ -44,18 +44,18 @@ const PIEZAS = {
     articulacion: 'snon',
     capas: [['kickmic', 1], ['mid', 0.3]],
     fuerza: 1,
-    afinacion: 0.86, // un bombo más grande
+    afinacion: 0.78, // bombo de rock, bien grande
     eq: [
       { tipo: 'pasaaltos', frecuencia: 25 },
-      { tipo: 'graves', frecuencia: 58, db: 8 }, // el "gordo"
+      { tipo: 'graves', frecuencia: 52, db: 9 }, // el "gordo"
       { tipo: 'pico', frecuencia: 400, q: 1.1, db: -7 }, // fuera el cartón
-      { tipo: 'pico', frecuencia: 2600, q: 1.4, db: 2 }, // lo justo para oírlo
-      { tipo: 'agudos', frecuencia: 6000, db: -5 }, // menos agudo
+      { tipo: 'pico', frecuencia: 2200, q: 1.4, db: 2 }, // lo justo para oírlo
+      { tipo: 'agudos', frecuencia: 5500, db: -6 }, // menos agudo
     ],
-    compresor: { umbralDb: -16, ratio: 4, ataqueMs: 12, soltarMs: 120, compensarDb: 3 },
-    puerta: { mantenerMs: 85, caidaMs: 270 },
-    saturacion: 0.2,
-    nivel: 1,
+    compresor: { umbralDb: -15, ratio: 5, ataqueMs: 12, soltarMs: 110, compensarDb: 4 },
+    puerta: { mantenerMs: 95, caidaMs: 320 },
+    saturacion: 0.28,
+    nivel: 0.94,
     segundos: 0.9,
   },
   tarola: {
@@ -63,16 +63,16 @@ const PIEZAS = {
     articulacion: 'center',
     capas: [['snaremic', 1], ['oh', 0.3], ['room', 0.12]],
     fuerza: 0.85,
-    afinacion: 0.93,
+    afinacion: 0.88, // tarola de rock, más grave
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 80 },
-      { tipo: 'pico', frecuencia: 185, q: 1, db: 4 }, // cuerpo
+      { tipo: 'pasaaltos', frecuencia: 75 },
+      { tipo: 'pico', frecuencia: 175, q: 1, db: 5 }, // cuerpo
       { tipo: 'pico', frecuencia: 850, q: 1.2, db: -4 },
       { tipo: 'agudos', frecuencia: 6000, db: 1 }, // apenas un toque de crack
     ],
-    compresor: { umbralDb: -18, ratio: 4, ataqueMs: 4, soltarMs: 120, compensarDb: 3 },
-    puerta: { mantenerMs: 65, caidaMs: 290 },
-    saturacion: 0.22,
+    compresor: { umbralDb: -17, ratio: 5, ataqueMs: 4, soltarMs: 120, compensarDb: 4 },
+    puerta: { mantenerMs: 70, caidaMs: 320 },
+    saturacion: 0.28,
     nivel: 0.92,
     segundos: 0.9,
   },
@@ -81,9 +81,9 @@ const PIEZAS = {
     articulacion: 'rimshot',
     capas: [['snaremic', 1], ['oh', 0.3], ['room', 0.14]],
     fuerza: 0.9,
-    afinacion: 0.93,
+    afinacion: 0.88,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 90 },
+      { tipo: 'pasaaltos', frecuencia: 85 },
       { tipo: 'pico', frecuencia: 210, q: 1, db: 3 },
       { tipo: 'pico', frecuencia: 3200, q: 1.3, db: 2 },
       { tipo: 'agudos', frecuencia: 7000, db: -2 },
@@ -91,7 +91,7 @@ const PIEZAS = {
     compresor: { umbralDb: -18, ratio: 5, ataqueMs: 2, soltarMs: 130, compensarDb: 3 },
     puerta: { mantenerMs: 70, caidaMs: 310 },
     saturacion: 0.25,
-    nivel: 1,
+    nivel: 0.95,
     segundos: 0.9,
   },
   aro: {
@@ -217,17 +217,17 @@ const PIEZAS = {
     articulacion: 'center',
     capas: [['mid', 1], ['oh', 0.4], ['room', 0.16]],
     fuerza: 0.85,
-    afinacion: 0.86, // tom más grande
+    afinacion: 0.78, // tom de rock
     eq: [
       { tipo: 'pasaaltos', frecuencia: 50 },
-      { tipo: 'graves', frecuencia: 100, db: 5 },
+      { tipo: 'graves', frecuencia: 90, db: 6 },
       { tipo: 'pico', frecuencia: 420, q: 1.3, db: -8 }, // el cartón, fuera
       { tipo: 'pico', frecuencia: 3200, q: 1.3, db: 2 }, // la baqueta, sin pasarse
-      { tipo: 'agudos', frecuencia: 6500, db: -4 },
+      { tipo: 'agudos', frecuencia: 6000, db: -5 },
     ],
-    compresor: { umbralDb: -20, ratio: 4, ataqueMs: 8, soltarMs: 200, compensarDb: 4 },
-    puerta: { mantenerMs: 105, caidaMs: 400 },
-    saturacion: 0.2,
+    compresor: { umbralDb: -19, ratio: 5, ataqueMs: 8, soltarMs: 200, compensarDb: 5 },
+    puerta: { mantenerMs: 115, caidaMs: 460 },
+    saturacion: 0.26,
     nivel: 0.85,
     segundos: 1.3,
   },
@@ -236,17 +236,17 @@ const PIEZAS = {
     articulacion: 'center',
     capas: [['mid', 1], ['oh', 0.4], ['room', 0.16]],
     fuerza: 0.85,
-    afinacion: 0.85,
+    afinacion: 0.77,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 45 },
-      { tipo: 'graves', frecuencia: 85, db: 5 },
+      { tipo: 'pasaaltos', frecuencia: 42 },
+      { tipo: 'graves', frecuencia: 78, db: 6 },
       { tipo: 'pico', frecuencia: 380, q: 1.3, db: -8 },
       { tipo: 'pico', frecuencia: 2800, q: 1.3, db: 2 },
-      { tipo: 'agudos', frecuencia: 6000, db: -4 },
+      { tipo: 'agudos', frecuencia: 5500, db: -5 },
     ],
-    compresor: { umbralDb: -20, ratio: 4, ataqueMs: 8, soltarMs: 240, compensarDb: 4 },
-    puerta: { mantenerMs: 125, caidaMs: 500 },
-    saturacion: 0.2,
+    compresor: { umbralDb: -19, ratio: 5, ataqueMs: 8, soltarMs: 240, compensarDb: 5 },
+    puerta: { mantenerMs: 135, caidaMs: 560 },
+    saturacion: 0.26,
     nivel: 0.88,
     segundos: 1.5,
   },

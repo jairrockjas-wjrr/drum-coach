@@ -38,9 +38,9 @@ Para regenerarlos: `npm run samples`.
 
 | Pieza | Micrófonos | Procesado | Nivel | Duración | Tamaño |
 |---|---|---|---|---|---|
-| bombo | kickmic 100 % + mid 30 % | afinación 0.86 · 5 filtros · comp 4:1 · puerta 85+270 ms | 1 | 0.90 s | 7 KB |
-| tarola | snaremic 100 % + oh 30 % + room 12 % | afinación 0.93 · 4 filtros · comp 4:1 · puerta 65+290 ms | 0.92 | 0.90 s | 9 KB |
-| tarolaAro | snaremic 100 % + oh 30 % + room 14 % | afinación 0.93 · 4 filtros · comp 5:1 · puerta 70+310 ms | 1 | 0.90 s | 9 KB |
+| bombo | kickmic 100 % + mid 30 % | afinación 0.78 · 5 filtros · comp 5:1 · puerta 95+320 ms | 0.94 | 0.90 s | 8 KB |
+| tarola | snaremic 100 % + oh 30 % + room 12 % | afinación 0.88 · 4 filtros · comp 5:1 · puerta 70+320 ms | 0.92 | 0.90 s | 9 KB |
+| tarolaAro | snaremic 100 % + oh 30 % + room 14 % | afinación 0.88 · 4 filtros · comp 5:1 · puerta 70+310 ms | 0.95 | 0.90 s | 9 KB |
 | aro | snaremic 100 % + oh 20 % | afinación 0.95 · 3 filtros · comp 3:1 · puerta 25+110 ms | 0.52 | 0.60 s | 6 KB |
 | hiHatCerrado | oh 100 % + snaremic 30 % | afinación 1 · 3 filtros · comp 2.5:1 · puerta 30+150 ms | 0.4 | 0.45 s | 7 KB |
 | hiHatAbierto | oh 100 % + snaremic 25 % + room 10 % | afinación 1 · 2 filtros · comp 2.5:1 · puerta 260+600 ms | 0.5 | 1.20 s | 15 KB |
@@ -48,8 +48,8 @@ Para regenerarlos: `npm run samples`.
 | ride | oh 100 % + mid 30 % + room 10 % | afinación 1 · 3 filtros · comp 2.5:1 · puerta 900+700 ms | 0.48 | 1.80 s | 27 KB |
 | campana | oh 100 % + mid 30 % + room 10 % | afinación 1 · 3 filtros · comp 3:1 · puerta 700+600 ms | 0.56 | 1.50 s | 22 KB |
 | crash | oh 100 % + mid 35 % + room 20 % | afinación 1 · 3 filtros · comp 2:1 · puerta 1400+900 ms | 0.78 | 2.40 s | 36 KB |
-| tomAgudo | mid 100 % + oh 40 % + room 16 % | afinación 0.86 · 5 filtros · comp 4:1 · puerta 105+400 ms | 0.85 | 1.30 s | 10 KB |
-| tomMedio | mid 100 % + oh 40 % + room 16 % | afinación 0.85 · 5 filtros · comp 4:1 · puerta 125+500 ms | 0.88 | 1.50 s | 10 KB |
+| tomAgudo | mid 100 % + oh 40 % + room 16 % | afinación 0.78 · 5 filtros · comp 5:1 · puerta 115+460 ms | 0.85 | 1.30 s | 10 KB |
+| tomMedio | mid 100 % + oh 40 % + room 16 % | afinación 0.77 · 5 filtros · comp 5:1 · puerta 135+560 ms | 0.88 | 1.50 s | 11 KB |
 
 El tom de piso no tiene sample propio: el pack solo trae dos toms, así que se
 reproduce el tom grave con la afinación bajada.
