@@ -10,7 +10,10 @@
 //  - Resto de archivos del mismo origen (JS, CSS, íconos): primero la copia guardada
 //    (son archivos con hash en el nombre, nunca cambian), y si no está, se descarga y guarda.
 
-const VERSION = 'drum-coach-v2'
+// La versión viene en la dirección con la que se registra el service worker
+// (sw.js?v=<compilación>), así cada publicación estrena caché y no se queda
+// ningún archivo viejo dando guerra.
+const VERSION = 'drum-coach-' + (new URL(self.location.href).searchParams.get('v') ?? 'dev')
 const BASE = new URL('./', self.registration.scope).pathname
 
 // Lo mínimo para que la app arranque sin internet.

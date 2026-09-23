@@ -27,6 +27,19 @@ import { mantenerPantallaEncendida, soltarPantalla } from '../sistema/wake-lock'
 
 const CLAVE_GUARDADO = 'reproductor'
 
+/** Iconos dibujados. Con caracteres (▶, ⟳, ✕) nunca quedan centrados. */
+const ICONOS = {
+  volver: '<path d="M14.5 5 8 12l6.5 7"/>',
+  tocar: '<path d="M8.5 5.5 18 12l-9.5 6.5z" fill="currentColor" stroke="none"/>',
+  parar: '<rect x="7.5" y="7.5" width="9" height="9" rx="1.5" fill="currentColor" stroke="none"/>',
+  bucle: '<path d="M5 10a6 6 0 0 1 10-4.5"/><path d="M19 14a6 6 0 0 1-10 4.5"/><path d="M15 2.5v3.5h-3.5"/><path d="M9 21.5V18h3.5"/>',
+  ajustes: '<circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
+  cerrar: '<path d="M6.5 6.5 17.5 17.5"/><path d="M17.5 6.5 6.5 17.5"/>',
+}
+
+const icono = (nombre: keyof typeof ICONOS): string =>
+  `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONOS[nombre]}</svg>`
+
 interface Preferencias {
   loop: boolean
   conClick: boolean
@@ -90,17 +103,24 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
 
   raiz.innerHTML = `
     <header class="barra-ejercicio">
-      <a class="icono icono--discreto" href="#/ejercicios" aria-label="Volver a los ejercicios">‹</a>
+      <a class="icono icono--discreto" href="#/ejercicios" aria-label="Volver a los ejercicios">
+        ${icono('volver')}
+      </a>
 
-      <button class="tocar" id="tocar" aria-label="Reproducir">▶</button>
+      <button class="tocar" id="tocar" aria-label="Reproducir">${icono('tocar')}</button>
 
-      <button class="chip-tempo" id="abrir-tempo" aria-label="Cambiar la velocidad">
-        <strong id="bpm-numero">${bpm}</strong>
-        <span>BPM</span>
+      <div class="tempo">
+        <button class="tempo__paso" data-paso="-5">−5</button>
+        <button class="tempo__paso" data-paso="-1">−1</button>
+        <span class="tempo__valor"><strong id="bpm-numero">${bpm}</strong><small>BPM</small></span>
+        <button class="tempo__paso" data-paso="1">+1</button>
+        <button class="tempo__paso" data-paso="5">+5</button>
+      </div>
+
+      <button class="icono" id="loop" aria-label="Repetir en bucle" aria-pressed="${prefs.loop}">
+        ${icono('bucle')}
       </button>
-
-      <button class="icono" id="loop" aria-label="Repetir en bucle" aria-pressed="${prefs.loop}">⟳</button>
-      <button class="icono" id="abrir-ajustes" aria-label="Ajustes">⋯</button>
+      <button class="icono" id="abrir-ajustes" aria-label="Ajustes">${icono('ajustes')}</button>
     </header>
 
     <main class="lienzo">
@@ -111,40 +131,20 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       <p class="estado-ejercicio" id="estado">${ejercicio.descripcion}</p>
     </footer>
 
-    <dialog class="panel" id="panel-tempo">
-      <div class="panel__barra">
-        <strong>Velocidad</strong>
-        <button class="icono" id="cerrar-tempo" aria-label="Cerrar">✕</button>
-      </div>
-      <div class="panel__cuerpo">
-        <div class="bpm">
-          <button class="bpm__paso" data-paso="-5">−5</button>
-          <button class="bpm__paso" data-paso="-1">−1</button>
-          <div class="bpm__valor">
-            <strong id="bpm-grande">${bpm}</strong>
-            <small>sugerido ${ejercicio.bpmSugerido} BPM</small>
-          </div>
-          <button class="bpm__paso" data-paso="1">+1</button>
-          <button class="bpm__paso" data-paso="5">+5</button>
-        </div>
-        <input class="rango" type="range" id="bpm-rango" min="${BPM_MINIMO}" max="${BPM_MAXIMO}"
-               value="${bpm}" aria-label="Velocidad en BPM" />
-        <div class="acciones">
-          <button class="boton" id="tap">Tap tempo</button>
-          <button class="boton" id="sugerido">Volver al sugerido</button>
-        </div>
-      </div>
-    </dialog>
-
     <dialog class="panel" id="ajustes">
       <div class="panel__barra">
         <strong>${ejercicio.titulo}</strong>
-        <button class="icono" id="cerrar-ajustes" aria-label="Cerrar">✕</button>
+        <button class="icono" id="cerrar-ajustes" aria-label="Cerrar">${icono('cerrar')}</button>
       </div>
       <div class="panel__cuerpo">
         ${ejercicio.consejo ? `<p class="nota">💡 ${ejercicio.consejo}</p>` : ''}
 
         <div class="campos">
+          <label class="campo">
+            <span>Velocidad</span>
+            <input type="range" class="rango" id="bpm-rango" min="${BPM_MINIMO}" max="${BPM_MAXIMO}"
+                   value="${bpm}" aria-label="Velocidad en BPM" />
+          </label>
           <label class="campo">
             <span>Sonido de la batería</span>
             <select id="kit">
@@ -211,11 +211,9 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   const botonTocar = $<HTMLButtonElement>('tocar')
   const botonLoop = $<HTMLButtonElement>('loop')
   const bpmNumero = $<HTMLElement>('bpm-numero')
-  const bpmGrande = $<HTMLElement>('bpm-grande')
   const bpmRango = $<HTMLInputElement>('bpm-rango')
   const estado = $<HTMLElement>('estado')
   const panel = $<HTMLDialogElement>('ajustes')
-  const panelTempo = $<HTMLDialogElement>('panel-tempo')
 
   // --- Partitura ---
   // VexFlow se descarga aparte, solo al abrir un ejercicio.
@@ -365,7 +363,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     cancelAnimationFrame(animacion)
     cola.length = 0
     apagarCursor()
-    botonTocar.textContent = '▶'
+    botonTocar.innerHTML = icono('tocar')
     botonTocar.setAttribute('aria-label', 'Reproducir')
     botonTocar.classList.remove('tocar--parar')
     estado.textContent = ejercicio!.descripcion
@@ -389,7 +387,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     reproductor = crearReproductor(contexto, ejercicio!, opcionesActuales())
     reproductor.alEvento((evento) => cola.push(evento))
     reproductor.iniciar()
-    botonTocar.textContent = '■'
+    botonTocar.innerHTML = icono('parar')
     botonTocar.setAttribute('aria-label', 'Detener')
     botonTocar.classList.add('tocar--parar')
     animacion = requestAnimationFrame(bucleVisual)
@@ -400,7 +398,6 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   function cambiarBpm(nuevo: number): void {
     bpm = Math.min(BPM_MAXIMO, Math.max(BPM_MINIMO, Math.round(nuevo)))
     bpmNumero.textContent = String(bpm)
-    bpmGrande.textContent = String(bpm)
     bpmRango.value = String(bpm)
     cola.length = 0
     reproductor?.cambiarBpm(bpm)
@@ -428,30 +425,10 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     if (e.target === panel) panel.close()
   })
 
-  raiz.querySelectorAll<HTMLButtonElement>('.bpm__paso').forEach((boton) => {
+  raiz.querySelectorAll<HTMLButtonElement>('.tempo__paso').forEach((boton) => {
     boton.addEventListener('click', () => cambiarBpm(bpm + Number(boton.dataset.paso)))
   })
   bpmRango.addEventListener('input', () => cambiarBpm(Number(bpmRango.value)))
-
-  // --- Panel de velocidad ---
-  $<HTMLButtonElement>('abrir-tempo').addEventListener('click', () => panelTempo.showModal())
-  $<HTMLButtonElement>('cerrar-tempo').addEventListener('click', () => panelTempo.close())
-  panelTempo.addEventListener('click', (e) => {
-    if (e.target === panelTempo) panelTempo.close()
-  })
-  $<HTMLButtonElement>('sugerido').addEventListener('click', () => cambiarBpm(ejercicio!.bpmSugerido))
-
-  // Tap tempo: se marca el pulso a golpes y la app saca la velocidad.
-  let toques: number[] = []
-  $<HTMLButtonElement>('tap').addEventListener('click', () => {
-    const ahora = performance.now()
-    if (toques.length > 0 && ahora - toques[toques.length - 1] > 2500) toques = []
-    toques.push(ahora)
-    if (toques.length > 5) toques.shift()
-    if (toques.length < 2) return
-    const intervalos = toques.slice(1).map((t, i) => t - toques[i])
-    cambiarBpm(60000 / (intervalos.reduce((a, b) => a + b, 0) / intervalos.length))
-  })
 
   const casilla = (id: string, asignar: (valor: boolean) => void, redibujar = false): void => {
     $<HTMLInputElement>(id).addEventListener('change', (e) => {

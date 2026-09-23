@@ -6,7 +6,9 @@ export function registrarServiceWorker(): void {
   if (import.meta.env.DEV) return
 
   window.addEventListener('load', () => {
-    const ruta = `${import.meta.env.BASE_URL}sw.js`
+    // Con la compilación en la dirección, el navegador ve un service worker
+    // nuevo en cada publicación y renueva todo lo guardado.
+    const ruta = `${import.meta.env.BASE_URL}sw.js?v=${__COMPILACION__}`
     navigator.serviceWorker.register(ruta, { scope: import.meta.env.BASE_URL }).catch((error) => {
       console.warn('No se pudo registrar el service worker:', error)
     })

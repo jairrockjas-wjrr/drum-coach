@@ -591,67 +591,76 @@ a.barra__volver {
   overflow: hidden;
 }
 
-/* --- Barra de arriba: volver, play, tempo, bucle y ajustes --- */
+/* --- Barra de arriba: volver, play, velocidad, bucle y ajustes --- */
 .barra-ejercicio {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: calc(env(safe-area-inset-top) + 10px) calc(env(safe-area-inset-right) + 12px) 10px
-    calc(env(safe-area-inset-left) + 12px);
+  gap: 4px;
+  padding: calc(env(safe-area-inset-top) + 8px) calc(env(safe-area-inset-right) + 8px) 8px
+    calc(env(safe-area-inset-left) + 8px);
   background: var(--superficie);
   border-bottom: 1px solid var(--borde);
 }
 
+/* Iconos dibujados: se centran solos y quedan discretos. */
 .icono {
+  flex: none;
+  width: 36px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--texto-suave);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.icono svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icono:active {
+  color: var(--texto);
+}
+
+.icono--activo {
+  color: var(--acento);
+}
+
+.icono--discreto {
+  width: 30px;
+}
+
+/* --- Play/stop: el único botón con color --- */
+.tocar {
   flex: none;
   width: 44px;
   height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--borde);
-  border-radius: 14px;
-  background: var(--superficie-alta);
-  color: var(--texto);
-  font-size: 19px;
-  line-height: 1;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.icono:active {
-  background: #2b3140;
-}
-
-.icono--activo {
-  border-color: var(--acento);
-  color: var(--acento);
-}
-
-/* El botón de volver no compite con el resto. */
-.icono--discreto {
-  width: 34px;
-  border: none;
-  background: none;
-  color: var(--texto-suave);
-  font-size: 24px;
-}
-
-/* --- Play/stop, el botón que más se toca --- */
-.tocar {
-  flex: none;
-  width: 52px;
-  height: 52px;
   border-radius: 50%;
   border: none;
   background: var(--acento);
   color: #241503;
-  font-size: 19px;
-  line-height: 1;
   cursor: pointer;
   transition: transform 0.06s ease, background 0.15s ease;
-  /* El símbolo ▶ se ve descentrado si no se corrige. */
-  padding-left: 3px;
+}
+
+.tocar svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
 }
 
 .tocar:active {
@@ -661,43 +670,60 @@ a.barra__volver {
 .tocar--parar {
   background: var(--error);
   color: #2a0a0a;
-  padding-left: 0;
 }
 
 .tocar--cargando {
   opacity: 0.5;
 }
 
-/* --- Chip del tempo: se toca y abre el panel de velocidad --- */
-.chip-tempo {
+/* --- Velocidad, a la vista en la barra --- */
+.tempo {
   flex: 1;
-  min-width: 0;
-  height: 52px;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
-  gap: 5px;
-  border: 1px solid var(--borde);
-  border-radius: 16px;
-  background: var(--superficie-alta);
-  color: var(--texto);
+  gap: 2px;
+  min-width: 0;
+}
+
+.tempo__paso {
+  flex: none;
+  min-width: 32px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--texto-suave);
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.chip-tempo:active {
-  background: #2b3140;
+.tempo__paso:active {
+  color: var(--acento);
 }
 
-.chip-tempo strong {
-  font-size: 26px;
+.tempo__valor {
+  flex: 1;
+  min-width: 48px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 3px;
+  line-height: 1;
+}
+
+.tempo__valor strong {
+  font-size: 22px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.5px;
 }
 
-.chip-tempo span {
-  font-size: 11px;
-  letter-spacing: 1px;
+.tempo__valor small {
+  font-size: 10px;
+  letter-spacing: 0.5px;
   color: var(--texto-suave);
 }
 
@@ -820,20 +846,6 @@ a.barra__volver {
   display: block;
   width: 100%;
   height: auto;
-}
-
-/* --- Panel de velocidad --- */
-#panel-tempo .bpm {
-  margin-top: 8px;
-}
-
-#panel-tempo .bpm__valor small {
-  white-space: nowrap;
-  font-size: 12px;
-}
-
-#panel-tempo .acciones {
-  margin-top: 4px;
 }
 
 /* --- Sticking y conteo debajo de las notas --- */
