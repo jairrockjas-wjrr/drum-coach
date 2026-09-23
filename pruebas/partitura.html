@@ -13,6 +13,7 @@
   </head>
   <body>
     <h1>Partituras del catálogo</h1>
+    <p id="veredicto">Comprobando…</p>
     <div id="todo"></div>
     <script type="module">
       import { EJERCICIOS } from '/src/ejercicios/catalogo.ts'
@@ -21,6 +22,7 @@
       const ancho = Math.min(document.body.clientWidth - 32, 760)
       const todo = document.getElementById('todo')
       const errores = []
+      const desalineadas = []
       for (const ejercicio of EJERCICIOS) {
         const titulo = document.createElement('h2')
         titulo.textContent = `${ejercicio.titulo} — ${ejercicio.compas.pulsos}/${ejercicio.compas.figura}`
@@ -30,13 +32,33 @@
         hoja.className = 'hoja'
         todo.append(titulo, desc, hoja)
         try {
-          dibujarPartitura(hoja, ejercicio, { ancho })
+          const notas = dibujarPartitura(hoja, ejercicio, { ancho })
+          // Lo que suena a la vez tiene que verse a la vez: mismo tick, misma x.
+          const porTick = {}
+          for (const n of notas) {
+            const r = n.elemento?.getBoundingClientRect()
+            if (r) (porTick[n.ticks] ||= []).push(r.x)
+          }
+          for (const [tick, xs] of Object.entries(porTick)) {
+            if (xs.length < 2) continue
+            const dif = Math.max(...xs) - Math.min(...xs)
+            if (dif > 1) desalineadas.push(`${ejercicio.id} (tick ${tick}): ${Math.round(dif)} px`)
+          }
         } catch (e) {
           errores.push(`${ejercicio.id}: ${e.message}`)
           hoja.textContent = 'ERROR: ' + e.message
         }
       }
       window.__errores = errores
+      window.__desalineadas = desalineadas
+      const veredicto = document.getElementById('veredicto')
+      if (errores.length === 0 && desalineadas.length === 0) {
+        veredicto.textContent = 'Todo bien: ninguna partitura falla y las notas simultáneas están alineadas.'
+        veredicto.style.color = '#56c271'
+      } else {
+        veredicto.textContent = 'Problemas: ' + [...errores, ...desalineadas].join(' · ')
+        veredicto.style.color = '#ef6b6b'
+      }
     </script>
   </body>
 </html>

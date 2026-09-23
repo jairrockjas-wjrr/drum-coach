@@ -1,4 +1,6 @@
-// Pantalla de un ejercicio: partitura, batería y click, todo sincronizado.
+// Pantalla de un ejercicio, pensada para el atril:
+// la partitura ocupa toda la pantalla, el metrónomo va arriba en una barra
+// compacta, y el resto de opciones se abren con el botón ⋯.
 
 import { desbloquearAudio } from '../audio/contexto'
 import { EJERCICIOS } from '../ejercicios/catalogo'
@@ -10,8 +12,8 @@ import {
   type Reproductor,
 } from '../ejercicios/reproductor'
 import type { NotaDibujada } from '../notacion/partitura'
-import { ORDEN_LEYENDA, SITIO } from '../notacion/piezas'
-import { NOMBRE_PIEZA } from '../audio/bateria'
+import { ORDEN_LEYENDA } from '../notacion/piezas'
+import { NOMBRE_PIEZA, cargarBateria, haySonidosReales } from '../audio/bateria'
 import { BPM_MAXIMO, BPM_MINIMO } from '../metronomo/tipos'
 import { guardar, leer } from '../datos/preferencias'
 import { mantenerPantallaEncendida, soltarPantalla } from '../sistema/wake-lock'
@@ -48,9 +50,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   const ejercicio = EJERCICIOS.find((e) => e.id === id)
   if (!ejercicio) {
     raiz.innerHTML = `
-      <header class="barra">
-        <a class="barra__volver" href="#/ejercicios">‹ Ejercicios</a>
-      </header>
+      <header class="barra"><a class="barra__volver" href="#/ejercicios">‹ Ejercicios</a></header>
       <p class="nota">Ese ejercicio ya no existe.</p>`
     return () => {}
   }
@@ -73,121 +73,122 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     }
   }
 
+  // La pantalla del ejercicio va a sangre: sin márgenes ni ancho máximo.
+  raiz.classList.add('app--completa')
+
   raiz.innerHTML = `
-    <header class="barra">
-      <a class="barra__volver" href="#/ejercicios">‹ Ejercicios</a>
-      <span class="barra__titulo">${ejercicio.titulo}</span>
+    <header class="barra-ejercicio">
+      <a class="icono" href="#/ejercicios" aria-label="Volver a los ejercicios">‹</a>
+
+      <div class="tempo">
+        <button class="tempo__paso" data-paso="-5">−5</button>
+        <button class="tempo__paso" data-paso="-1">−1</button>
+        <span class="tempo__valor"><strong id="bpm-numero">${bpm}</strong><small>BPM</small></span>
+        <button class="tempo__paso" data-paso="1">+1</button>
+        <button class="tempo__paso" data-paso="5">+5</button>
+      </div>
+
+      <button class="icono" id="loop" aria-label="Repetir en bucle" aria-pressed="${prefs.loop}">⟳</button>
+      <button class="icono" id="abrir-ajustes" aria-label="Ajustes">⋯</button>
     </header>
 
-    <section class="tarjeta">
-      <p class="nota" style="margin-top:0">${ejercicio.descripcion}</p>
+    <main class="lienzo">
       <div class="hoja" id="hoja"></div>
-      <p class="estado-ejercicio" id="estado"></p>
-    </section>
+    </main>
 
-    <section class="tarjeta practica">
-      <div class="bpm">
-        <button class="bpm__paso" data-paso="-5">−5</button>
-        <button class="bpm__paso" data-paso="-1">−1</button>
-        <div class="bpm__valor">
-          <strong id="bpm-numero">${bpm}</strong>
-          <small>BPM · sugerido ${ejercicio.bpmSugerido}</small>
+    <footer class="pie-ejercicio">
+      <p class="estado-ejercicio" id="estado">${ejercicio.descripcion}</p>
+      <button class="boton boton--principal" id="tocar">Reproducir</button>
+    </footer>
+
+    <dialog class="panel" id="ajustes">
+      <div class="panel__barra">
+        <strong>${ejercicio.titulo}</strong>
+        <button class="icono" id="cerrar-ajustes" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="panel__cuerpo">
+        ${ejercicio.consejo ? `<p class="nota">💡 ${ejercicio.consejo}</p>` : ''}
+
+        <div class="campos">
+          <label class="campo">
+            <span>Velocidad</span>
+            <input type="range" class="rango" id="bpm-rango" min="${BPM_MINIMO}" max="${BPM_MAXIMO}"
+                   value="${bpm}" aria-label="Velocidad en BPM" />
+          </label>
+          <label class="campo campo--interruptor">
+            <span>Click del metrónomo</span>
+            <input type="checkbox" id="con-click" ${prefs.conClick ? 'checked' : ''} />
+          </label>
+          <label class="campo campo--interruptor">
+            <span>Silenciar manos <small>para estudiar solo los pies</small></span>
+            <input type="checkbox" id="sin-manos" ${prefs.silenciarManos ? 'checked' : ''} />
+          </label>
+          <label class="campo campo--interruptor">
+            <span>Silenciar pies</span>
+            <input type="checkbox" id="sin-pies" ${prefs.silenciarPies ? 'checked' : ''} />
+          </label>
+          <label class="campo campo--interruptor">
+            <span>Escuchar y tocar <small>una vuelta con batería, la siguiente solo click</small></span>
+            <input type="checkbox" id="escuchar" ${prefs.escucharYTocar ? 'checked' : ''} />
+          </label>
+          <label class="campo">
+            <span>Cuenta de entrada</span>
+            <select id="entrada">
+              <option value="0" ${prefs.cuentaEntrada === 0 ? 'selected' : ''}>Sin cuenta</option>
+              <option value="1" ${prefs.cuentaEntrada === 1 ? 'selected' : ''}>1 compás</option>
+              <option value="2" ${prefs.cuentaEntrada === 2 ? 'selected' : ''}>2 compases</option>
+            </select>
+          </label>
+          <label class="campo campo--interruptor">
+            <span>Mostrar sticking (R/L)</span>
+            <input type="checkbox" id="ver-sticking" ${prefs.mostrarSticking ? 'checked' : ''} />
+          </label>
+          <label class="campo campo--interruptor">
+            <span>Mostrar el conteo</span>
+            <input type="checkbox" id="ver-conteo" ${prefs.mostrarConteo ? 'checked' : ''} />
+          </label>
+          <label class="campo">
+            <span>Volumen de la batería</span>
+            <input type="range" class="rango" id="vol-bateria" min="0" max="100"
+                   value="${Math.round(prefs.volumenBateria * 100)}" />
+          </label>
+          <label class="campo">
+            <span>Volumen del click</span>
+            <input type="range" class="rango" id="vol-click" min="0" max="100"
+                   value="${Math.round(prefs.volumenClick * 100)}" />
+          </label>
         </div>
-        <button class="bpm__paso" data-paso="1">+1</button>
-        <button class="bpm__paso" data-paso="5">+5</button>
-      </div>
-      <input class="rango" type="range" id="bpm-rango" min="${BPM_MINIMO}" max="${BPM_MAXIMO}"
-             value="${bpm}" aria-label="Velocidad en BPM" />
-      <div class="acciones">
-        <button class="boton boton--principal" id="tocar">Reproducir</button>
-        <button class="boton" id="loop" aria-pressed="${prefs.loop}">Loop</button>
-      </div>
-      ${ejercicio.consejo ? `<p class="nota">💡 ${ejercicio.consejo}</p>` : ''}
-    </section>
 
-    <details class="tarjeta detalle">
-      <summary>Ajustes</summary>
-      <div class="campos">
-        <label class="campo campo--interruptor">
-          <span>Click del metrónomo</span>
-          <input type="checkbox" id="con-click" ${prefs.conClick ? 'checked' : ''} />
-        </label>
-        <label class="campo campo--interruptor">
-          <span>Silenciar manos <small>para estudiar solo los pies</small></span>
-          <input type="checkbox" id="sin-manos" ${prefs.silenciarManos ? 'checked' : ''} />
-        </label>
-        <label class="campo campo--interruptor">
-          <span>Silenciar pies</span>
-          <input type="checkbox" id="sin-pies" ${prefs.silenciarPies ? 'checked' : ''} />
-        </label>
-        <label class="campo campo--interruptor">
-          <span>Escuchar y tocar <small>una vuelta con batería, la siguiente solo click</small></span>
-          <input type="checkbox" id="escuchar" ${prefs.escucharYTocar ? 'checked' : ''} />
-        </label>
-        <label class="campo">
-          <span>Cuenta de entrada</span>
-          <select id="entrada">
-            <option value="0" ${prefs.cuentaEntrada === 0 ? 'selected' : ''}>Sin cuenta</option>
-            <option value="1" ${prefs.cuentaEntrada === 1 ? 'selected' : ''}>1 compás</option>
-            <option value="2" ${prefs.cuentaEntrada === 2 ? 'selected' : ''}>2 compases</option>
-          </select>
-        </label>
-        <label class="campo campo--interruptor">
-          <span>Mostrar sticking (R/L)</span>
-          <input type="checkbox" id="ver-sticking" ${prefs.mostrarSticking ? 'checked' : ''} />
-        </label>
-        <label class="campo campo--interruptor">
-          <span>Mostrar el conteo</span>
-          <input type="checkbox" id="ver-conteo" ${prefs.mostrarConteo ? 'checked' : ''} />
-        </label>
-        <label class="campo">
-          <span>Volumen de la batería</span>
-          <input type="range" class="rango" id="vol-bateria" min="0" max="100"
-                 value="${Math.round(prefs.volumenBateria * 100)}" />
-        </label>
-        <label class="campo">
-          <span>Volumen del click</span>
-          <input type="range" class="rango" id="vol-click" min="0" max="100"
-                 value="${Math.round(prefs.volumenClick * 100)}" />
-        </label>
+        <h3 class="panel__titulo">Qué es cada línea</h3>
+        <div class="leyenda" id="leyenda"></div>
       </div>
-    </details>
-
-    <details class="tarjeta detalle">
-      <summary>Qué es cada línea del pentagrama</summary>
-      <ul class="estado">
-        ${ORDEN_LEYENDA.filter((p) => piezasUsadas.has(p))
-          .map(
-            (pieza) => `
-          <li><span class="punto punto--ok"></span>
-            <span><strong>${NOMBRE_PIEZA[pieza]}:</strong> ${SITIO[pieza].donde}</span></li>`,
-          )
-          .join('')}
-      </ul>
-    </details>
+    </dialog>
   `
 
   const $ = <T extends HTMLElement>(id: string): T => raiz.querySelector<T>('#' + id)!
   const hoja = $<HTMLDivElement>('hoja')
+  const lienzo = raiz.querySelector<HTMLElement>('.lienzo')!
   const botonTocar = $<HTMLButtonElement>('tocar')
   const botonLoop = $<HTMLButtonElement>('loop')
   const bpmNumero = $<HTMLElement>('bpm-numero')
   const bpmRango = $<HTMLInputElement>('bpm-rango')
   const estado = $<HTMLElement>('estado')
+  const panel = $<HTMLDialogElement>('ajustes')
 
   // --- Partitura ---
-  // El dibujo de partituras (VexFlow) se descarga aparte, solo al abrir un
-  // ejercicio, para que la app arranque ligera.
-  let dibujar: typeof import('../notacion/partitura').dibujarPartitura | null = null
+  // VexFlow se descarga aparte, solo al abrir un ejercicio.
+  let notacion: typeof import('../notacion/partitura') | null = null
 
   async function pintarPartitura(): Promise<void> {
-    if (!dibujar) {
+    if (!notacion) {
       hoja.innerHTML = '<p class="cargando">Preparando la partitura…</p>'
-      dibujar = (await import('../notacion/partitura')).dibujarPartitura
+      notacion = await import('../notacion/partitura')
     }
-    const ancho = Math.max(280, hoja.clientWidth || raiz.clientWidth - 40)
-    notas = dibujar(hoja, ejercicio!, {
+    const ancho = Math.max(280, lienzo.clientWidth - 16)
+    const alto = Math.max(200, lienzo.clientHeight - 16)
+    notas = notacion.dibujarPartitura(hoja, ejercicio!, {
       ancho,
+      alto,
       mostrarSticking: prefs.mostrarSticking,
       mostrarConteo: prefs.mostrarConteo,
     })
@@ -195,6 +196,15 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     for (const nota of notas) {
       if (nota.elemento) porClave.set(`${nota.compas}-${nota.voz}-${nota.indice}`, nota.elemento)
     }
+  }
+
+  async function pintarLeyenda(): Promise<void> {
+    if (!notacion) notacion = await import('../notacion/partitura')
+    notacion.dibujarLeyenda(
+      $<HTMLDivElement>('leyenda'),
+      ORDEN_LEYENDA.filter((p) => piezasUsadas.has(p)),
+      NOMBRE_PIEZA,
+    )
   }
 
   function apagarCursor(): void {
@@ -208,16 +218,13 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     }
     if (evento.tipo === 'click') {
       const partes = [`Compás ${evento.compas + 1}`]
-      if (opcionesActuales().escucharYTocar) {
-        partes.push(evento.soloClick ? 'tu turno: toca tú' : 'escucha')
-      }
+      if (prefs.escucharYTocar) partes.push(evento.soloClick ? 'tu turno' : 'escucha')
       estado.textContent = partes.join(' · ')
       return
     }
 
     const elemento = porClave.get(`${evento.compas}-${evento.voz}-${evento.indice}`)
     if (!elemento) return
-    // Solo una nota encendida por voz, para que se vean las dos manos y pies.
     hoja
       .querySelectorAll(`.sonando[data-voz="${evento.voz}"]`)
       .forEach((el) => el.classList.remove('sonando'))
@@ -257,7 +264,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     apagarCursor()
     botonTocar.textContent = 'Reproducir'
     botonTocar.classList.remove('boton--parar')
-    estado.textContent = ''
+    estado.textContent = ejercicio!.descripcion
     void soltarPantalla()
   }
 
@@ -267,6 +274,12 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       return
     }
     contexto = await desbloquearAudio()
+    if (!haySonidosReales()) {
+      botonTocar.textContent = 'Cargando la batería…'
+      botonTocar.disabled = true
+      await cargarBateria(contexto)
+      botonTocar.disabled = false
+    }
     reproductor = crearReproductor(contexto, ejercicio!, opcionesActuales())
     reproductor.alEvento((evento) => cola.push(evento))
     reproductor.iniciar()
@@ -288,15 +301,26 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
 
   // --- Conexiones ---
   botonTocar.addEventListener('click', () => void alternar())
+
   botonLoop.addEventListener('click', () => {
     prefs.loop = !prefs.loop
     botonLoop.setAttribute('aria-pressed', String(prefs.loop))
-    botonLoop.classList.toggle('boton--activo', prefs.loop)
+    botonLoop.classList.toggle('icono--activo', prefs.loop)
     guardarPrefs()
   })
-  botonLoop.classList.toggle('boton--activo', prefs.loop)
+  botonLoop.classList.toggle('icono--activo', prefs.loop)
 
-  raiz.querySelectorAll<HTMLButtonElement>('.bpm__paso').forEach((boton) => {
+  $<HTMLButtonElement>('abrir-ajustes').addEventListener('click', () => {
+    panel.showModal()
+    void pintarLeyenda()
+  })
+  $<HTMLButtonElement>('cerrar-ajustes').addEventListener('click', () => panel.close())
+  // Tocar fuera del panel también lo cierra.
+  panel.addEventListener('click', (e) => {
+    if (e.target === panel) panel.close()
+  })
+
+  raiz.querySelectorAll<HTMLButtonElement>('.tempo__paso').forEach((boton) => {
     boton.addEventListener('click', () => cambiarBpm(bpm + Number(boton.dataset.paso)))
   })
   bpmRango.addEventListener('input', () => cambiarBpm(Number(bpmRango.value)))
@@ -340,6 +364,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
 
   return () => {
     detener()
+    raiz.classList.remove('app--completa')
     window.removeEventListener('resize', alCambiarTamano)
     clearTimeout(temporizadorAncho)
   }

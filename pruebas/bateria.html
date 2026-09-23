@@ -23,7 +23,7 @@
 
     <script type="module">
       import { desbloquearAudio, obtenerSalidaBateria } from '/src/audio/contexto.ts'
-      import { programarPieza, NOMBRE_PIEZA } from '/src/audio/bateria.ts'
+      import { programarPieza, NOMBRE_PIEZA, cargarBateria, haySonidosReales } from '/src/audio/bateria.ts'
 
       const piezas = Object.keys(NOMBRE_PIEZA)
       const botones = document.getElementById('botones')
@@ -32,6 +32,7 @@
         b.textContent = NOMBRE_PIEZA[pieza]
         b.onclick = async () => {
           const ctx = await desbloquearAudio()
+          await cargarBateria(ctx)
           programarPieza(ctx, pieza, { cuando: ctx.currentTime + 0.05 })
         }
         botones.append(b)
@@ -39,6 +40,9 @@
 
       document.getElementById('medir').onclick = async () => {
         const ctx = await desbloquearAudio()
+        await cargarBateria(ctx)
+        document.querySelector('h1').textContent =
+          'Batería ' + (haySonidosReales() ? '(sonidos reales)' : '(sintetizada de respaldo)')
         const analizador = ctx.createAnalyser()
         analizador.fftSize = 2048
         obtenerSalidaBateria().connect(analizador)

@@ -10,13 +10,14 @@ import {
   Dot,
   Formatter,
   Renderer,
+  type RenderContext,
   Stave,
   StaveNote,
   Stem,
   Tuplet,
   Voice,
 } from 'vexflow/bravura'
-import type { Ejercicio, Nota } from '../ejercicios/tipos'
+import type { Ejercicio, Nota, Pieza } from '../ejercicios/tipos'
 import { esSilencio, ticksDeNota, ticksPorPulso } from '../ejercicios/tipos'
 import { SITIO } from './piezas'
 
@@ -44,6 +45,8 @@ export interface NotaDibujada {
 
 export interface OpcionesPartitura {
   ancho: number
+  /** Alto disponible en pantalla. Si se indica, la música se agranda para llenarlo. */
+  alto?: number
   mostrarSticking?: boolean
   mostrarConteo?: boolean
 }
@@ -134,58 +137,133 @@ export function dibujarPartitura(
 ): NotaDibujada[] {
   contenedor.innerHTML = ''
 
-  const { ancho, mostrarSticking = true, mostrarConteo = true } = opciones
+  const { ancho, alto, mostrarSticking = true, mostrarConteo = true } = opciones
   const porPulso = ticksPorPulso(ejercicio.compas)
   const ticksCompas = ejercicio.compas.pulsos * porPulso
 
-  // Cuántos compases caben por renglón según el ancho y lo apretada que esté la música.
-  const notasPorCompas = Math.max(
-    ...ejercicio.compases.map((c) => Math.max(c.manos.length, c.pies.length)),
-  )
-  // Cada nota necesita su aire para que se lean el sticking y el conteo debajo.
-  const ANCHO_POR_NOTA = 30
   const MARGEN_IZQ = 10
   const MARGEN_ARRIBA = 24
   const ALTO_RENGLON = 118
+  const EXTRA_PRIMERO = 62 // lo que ocupan la clave y el compás
+  const AIRE = 34 // espacio de respeto a cada lado de la música
 
-  const disponible = ancho - 70 // lo que se llevan la clave y los márgenes
-  const porRenglon =
-    [4, 2, 1].find((cuantos) => notasPorCompas * ANCHO_POR_NOTA * cuantos <= disponible) ?? 1
+  // --- Primera pasada: armar la música y preguntarle a VexFlow cuánto sitio
+  // necesita de verdad. Antes lo estimaba a ojo y la música se salía del papel.
+  interface CompasArmado {
+    voces: Voice[]
+    adornos: { setContext: (c: RenderContext) => { draw: () => void } }[]
+    letreros: { x: () => number; conteo: string; mano: string }[]
+    minimo: number
+  }
 
-  const renglones = Math.ceil(ejercicio.compases.length / porRenglon)
-  const extraPrimero = 62
+  const dibujadas: (NotaDibujada & { vex: StaveNote })[] = []
+  let ticksAcumulados = 0
 
-  // Ancho que la música necesita de verdad. Si no cabe en la pantalla, el
-  // dibujo entero se escala al final: siempre se ve el compás completo, nunca
-  // hay que arrastrar la partitura de lado.
-  const anchoCompasBase = Math.max(
-    notasPorCompas * ANCHO_POR_NOTA,
-    (ancho - MARGEN_IZQ * 2 - extraPrimero) / porRenglon,
-  )
-  const anchoLienzo = MARGEN_IZQ * 2 + extraPrimero + anchoCompasBase * porRenglon
-  const altoLienzo = MARGEN_ARRIBA + renglones * ALTO_RENGLON + 16
+  const armados: CompasArmado[] = ejercicio.compases.map((compas, i) => {
+    const voces: Voice[] = []
+    const adornos: CompasArmado['adornos'] = []
+    const letreros: CompasArmado['letreros'] = []
+
+    for (const voz of ['manos', 'pies'] as const) {
+      const notas = compas[voz]
+      if (notas.length === 0) continue
+
+      let ticksEnCompas = 0
+      const vexNotas = notas.map((nota, indice) => {
+        const vex = crearNotaVex(nota, voz)
+        if (voz === 'manos') {
+          letreros.push({
+            x: () => vex.getAbsoluteX(),
+            conteo: mostrarConteo ? conteoDeNota(nota, ticksEnCompas, porPulso) : '',
+            mano: mostrarSticking && nota.mano && !esSilencio(nota) ? nota.mano : '',
+          })
+        }
+        dibujadas.push({ compas: i, voz, indice, ticks: ticksAcumulados + ticksEnCompas, vex })
+        ticksEnCompas += ticksDeNota(nota)
+        return vex
+      })
+
+      // Los tresillos se agrupan ANTES de meter las notas en la voz: agrupar
+      // cambia la duración real de cada nota, y si se hace después, VexFlow
+      // ya contó mal el tiempo y desalinea esta voz respecto a la otra.
+      const tresillos = armarTresillos(notas, vexNotas)
+
+      const vozVex = new Voice({
+        numBeats: ejercicio.compas.pulsos,
+        beatValue: ejercicio.compas.figura,
+      })
+      vozVex.setMode(Voice.Mode.SOFT)
+      vozVex.addTickables(vexNotas)
+      voces.push(vozVex)
+
+      for (const barra of Beam.generateBeams(vexNotas)) adornos.push(barra)
+      for (const tresillo of tresillos) adornos.push(tresillo)
+    }
+
+    ticksAcumulados += ticksCompas
+
+    let minimo = 0
+    if (voces.length > 0) {
+      const medidor = new Formatter()
+      if (voces.length > 1) medidor.joinVoices(voces)
+      minimo = medidor.preCalculateMinTotalWidth(voces)
+    }
+    return { voces, adornos, letreros, minimo }
+  })
+
+  // --- Reparto: cuántos compases por renglón ---
+  // Cuantos menos compases por renglón, más grandes salen las notas. Así que
+  // se elige el reparto que más las agranda sin que la partitura se salga de
+  // alto. Si no sabemos el alto, se busca simplemente que quepa a lo ancho.
+  const anchoCompasNecesario = Math.max(...armados.map((a) => a.minimo)) + AIRE
+  const util = ancho - MARGEN_IZQ * 2 - EXTRA_PRIMERO
+
+  const medir = (cuantos: number) => {
+    const anchoCompasBase = Math.max(anchoCompasNecesario, util / cuantos)
+    const renglones = Math.ceil(ejercicio.compases.length / cuantos)
+    const anchoLienzo = MARGEN_IZQ * 2 + EXTRA_PRIMERO + anchoCompasBase * cuantos
+    const escala = ancho / anchoLienzo
+    const altoNecesario = (MARGEN_ARRIBA + renglones * ALTO_RENGLON + 16) * escala
+    return { cuantos, anchoCompasBase, renglones, anchoLienzo, escala, altoNecesario }
+  }
+
+  const opcionesReparto = [1, 2, 4].map(medir)
+  const porRenglon = alto
+    ? // El primero (menos compases por renglón = notas más grandes) que quepa de alto.
+      (opcionesReparto.find((o) => o.altoNecesario <= alto) ?? opcionesReparto[opcionesReparto.length - 1])
+        .cuantos
+    : ([4, 2, 1].find((cuantos) => anchoCompasNecesario * cuantos <= util * 1.2) ?? 1)
+
+  const elegido = medir(porRenglon)
+  const { anchoCompasBase, renglones, anchoLienzo } = elegido
+
+  // Si sobra alto, los renglones se separan un poco y el bloque se centra,
+  // para que la partitura ocupe la hoja sin quedar apretada arriba.
+  let altoRenglon = ALTO_RENGLON
+  let altoLienzo = MARGEN_ARRIBA + renglones * altoRenglon + 16
+  let desplazamiento = 0
+  if (alto) {
+    const disponible = alto / elegido.escala
+    altoRenglon = Math.min(200, Math.max(ALTO_RENGLON, (disponible - MARGEN_ARRIBA - 16) / renglones))
+    const usado = MARGEN_ARRIBA + renglones * altoRenglon + 16
+    altoLienzo = Math.max(usado, disponible)
+    desplazamiento = Math.max(0, (altoLienzo - usado) / 2)
+  }
 
   const renderizador = new Renderer(contenedor, Renderer.Backends.SVG)
   renderizador.resize(anchoLienzo, altoLienzo)
   const ctx = renderizador.getContext()
 
-  // Guardamos también la nota de VexFlow para poder rescatar su SVG al final.
-  const dibujadas: (NotaDibujada & { vex: StaveNote })[] = []
-  let ticksAcumulados = 0
-
+  // --- Segunda pasada: dibujar ---
   for (let renglon = 0; renglon < renglones; renglon++) {
     const desde = renglon * porRenglon
     const hasta = Math.min(desde + porRenglon, ejercicio.compases.length)
-    const compasesDelRenglon = hasta - desde
-
-    // El primer compás del renglón lleva la clave (y el compás, si es el primero de todos).
-    void compasesDelRenglon
     let x = MARGEN_IZQ
-    const y = MARGEN_ARRIBA + renglon * ALTO_RENGLON
+    const y = MARGEN_ARRIBA + desplazamiento + renglon * altoRenglon
 
     for (let i = desde; i < hasta; i++) {
       const esPrimeroDelRenglon = i === desde
-      const anchoCompas = anchoCompasBase + (esPrimeroDelRenglon ? extraPrimero : 0)
+      const anchoCompas = anchoCompasBase + (esPrimeroDelRenglon ? EXTRA_PRIMERO : 0)
       const stave = new Stave(x, y, anchoCompas)
 
       if (esPrimeroDelRenglon) {
@@ -197,87 +275,48 @@ export function dibujarPartitura(
       stave.setMeasure(i + 1)
       stave.setContext(ctx).draw()
 
-      const compas = ejercicio.compases[i]
-      const voces: Voice[] = []
-      // Sticking y conteo: se pintan a mano, en dos filas debajo del pentagrama.
-      const letrerosDelCompas: { x: () => number; conteo: string; mano: string }[] = []
-      const adornos: { setContext: (c: typeof ctx) => { draw: () => void } }[] = []
-
-      for (const voz of ['manos', 'pies'] as const) {
-        const notas = compas[voz]
-        if (notas.length === 0) continue
-
-        let ticksEnCompas = 0
-        const letreros: { x: () => number; conteo: string; mano: string }[] = []
-        const vexNotas = notas.map((nota, indice) => {
-          const vex = crearNotaVex(nota, voz)
-          if (voz === 'manos') {
-            letreros.push({
-              x: () => vex.getAbsoluteX(),
-              conteo: mostrarConteo ? conteoDeNota(nota, ticksEnCompas, porPulso) : '',
-              mano: mostrarSticking && nota.mano && !esSilencio(nota) ? nota.mano : '',
-            })
-          }
-          dibujadas.push({ compas: i, voz, indice, ticks: ticksAcumulados + ticksEnCompas, vex })
-          ticksEnCompas += ticksDeNota(nota)
-          return vex
-        })
-        if (voz === 'manos') letrerosDelCompas.push(...letreros)
-
-        const vozVex = new Voice({
-          numBeats: ejercicio.compas.pulsos,
-          beatValue: ejercicio.compas.figura,
-        })
-        vozVex.setMode(Voice.Mode.SOFT)
-        vozVex.addTickables(vexNotas)
-        voces.push(vozVex)
-
-        for (const barra of Beam.generateBeams(vexNotas)) adornos.push(barra)
-        for (const tresillo of armarTresillos(notas, vexNotas)) adornos.push(tresillo)
+      const { voces, adornos, letreros } = armados[i]
+      if (voces.length === 0) {
+        x += anchoCompas
+        continue
       }
 
-      if (voces.length > 0) {
-        const formateador = new Formatter()
-        if (voces.length > 1) formateador.joinVoices(voces)
-        formateador.format(voces, anchoCompas - (esPrimeroDelRenglon ? extraPrimero + 18 : 24))
-        for (const voz of voces) voz.draw(ctx, stave)
-        for (const adorno of adornos) adorno.setContext(ctx).draw()
+      const formateador = new Formatter()
+      if (voces.length > 1) formateador.joinVoices(voces)
+      formateador.format(voces, anchoCompas - (esPrimeroDelRenglon ? EXTRA_PRIMERO + 18 : 18))
+      for (const voz of voces) voz.draw(ctx, stave)
+      for (const adorno of adornos) adorno.setContext(ctx).draw()
 
-        // Filas de texto: primero el sticking, debajo el conteo.
-        // Desde la línea de abajo del pentagrama, no desde getBottomY(),
-        // que deja demasiado aire y acercaba el texto al renglón siguiente.
-        const yBase = stave.getYForLine(4)
-        ctx.save()
-        for (const letrero of letrerosDelCompas) {
-          const x = letrero.x()
-          if (letrero.mano) {
-            ctx.setFont('system-ui, sans-serif', 11, 'bold')
-            ctx.setFillStyle('#1f2937')
-            ctx.fillText(letrero.mano, x - 3, yBase + 22)
-          }
-          if (letrero.conteo) {
-            ctx.setFont('system-ui, sans-serif', 11, 'normal')
-            ctx.setFillStyle('#9aa3b2')
-            ctx.fillText(letrero.conteo, x - 3, yBase + 38)
-          }
+      // Filas de texto: primero el sticking, debajo el conteo.
+      const yBase = stave.getYForLine(4)
+      ctx.save()
+      for (const letrero of letreros) {
+        const posX = letrero.x()
+        if (letrero.mano) {
+          ctx.setFont('system-ui, sans-serif', 11, 'bold')
+          ctx.setFillStyle('#1f2937')
+          ctx.fillText(letrero.mano, posX - 3, yBase + 22)
         }
-        ctx.restore()
+        if (letrero.conteo) {
+          ctx.setFont('system-ui, sans-serif', 11, 'normal')
+          ctx.setFillStyle('#9aa3b2')
+          ctx.fillText(letrero.conteo, posX - 3, yBase + 38)
+        }
       }
+      ctx.restore()
 
-      ticksAcumulados += ticksCompas
       x += anchoCompas
     }
   }
 
-  // Si el dibujo salió más ancho que la pantalla, se escala para que quepa
-  // entero (con viewBox el SVG se encoge sin perder nitidez).
+  // El dibujo se adapta al hueco que tenga: con viewBox llena el ancho y, si
+  // sobra alto (pantalla del ejercicio), crece hasta llenarlo también.
   const svg = contenedor.querySelector('svg')
   if (svg) {
     svg.setAttribute('viewBox', `0 0 ${anchoLienzo} ${altoLienzo}`)
-    svg.setAttribute('preserveAspectRatio', 'xMidYMin meet')
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
     svg.setAttribute('width', '100%')
     svg.removeAttribute('height')
-    svg.style.height = 'auto'
   }
 
   // Ya dibujadas, rescatamos el elemento SVG de cada nota para poder
@@ -285,4 +324,59 @@ export function dibujarPartitura(
   return dibujadas
     .map(({ vex, ...resto }) => ({ ...resto, elemento: vex.getSVGElement() }))
     .sort((a, b) => a.ticks - b.ticks)
+}
+
+/**
+ * Dibuja la leyenda: un mini pentagrama por pieza, mostrando cómo se escribe
+ * de verdad, en vez de explicarlo con palabras.
+ */
+export function dibujarLeyenda(contenedor: HTMLDivElement, piezas: Pieza[], nombres: Record<Pieza, string>): void {
+  contenedor.innerHTML = ''
+
+  for (const pieza of piezas) {
+    const fila = document.createElement('div')
+    fila.className = 'leyenda__fila'
+
+    const dibujo = document.createElement('div')
+    dibujo.className = 'leyenda__dibujo'
+    fila.append(dibujo)
+
+    const texto = document.createElement('span')
+    texto.textContent = nombres[pieza]
+    fila.append(texto)
+    contenedor.append(fila)
+
+    const ANCHO = 92
+    const ALTO = 96
+    const renderizador = new Renderer(dibujo, Renderer.Backends.SVG)
+    renderizador.resize(ANCHO, ALTO)
+    const ctx = renderizador.getContext()
+
+    const stave = new Stave(2, 18, ANCHO - 6)
+    stave.setContext(ctx).draw()
+
+    const esDePie = pieza === 'bombo' || pieza === 'hiHatPedal'
+    const nota = new StaveNote({
+      keys: [SITIO[pieza].clave],
+      duration: 'q',
+      stemDirection: esDePie ? Stem.DOWN : Stem.UP,
+    })
+    if (pieza === 'tarolaAro') nota.addModifier(new Articulation('a>').setPosition(3), 0)
+    if (pieza === 'hiHatAbierto') {
+      nota.addModifier(new Annotation('o').setVerticalJustification(Annotation.VerticalJustify.TOP), 0)
+    }
+
+    const voz = new Voice({ numBeats: 1, beatValue: 4 })
+    voz.setMode(Voice.Mode.SOFT)
+    voz.addTickables([nota])
+    new Formatter().format([voz], ANCHO - 44)
+    voz.draw(ctx, stave)
+
+    const svg = dibujo.querySelector('svg')
+    if (svg) {
+      svg.setAttribute('viewBox', `0 0 ${ANCHO} ${ALTO}`)
+      svg.setAttribute('width', '100%')
+      svg.removeAttribute('height')
+    }
+  }
 }

@@ -29,8 +29,9 @@ npm run iconos       # regenera los íconos PNG de la app
 Páginas de prueba manuales (solo en desarrollo):
 
 - `/pruebas/precision.html` — desviación del metrónomo contra el instante ideal.
-- `/pruebas/bateria.html` — suena y mide cada pieza de la batería sintetizada.
-- `/pruebas/partitura.html` — dibuja todas las partituras del catálogo.
+- `/pruebas/bateria.html` — suena y mide cada pieza de la batería.
+- `/pruebas/partitura.html` — dibuja todas las partituras del catálogo y comprueba
+  que las notas que suenan a la vez se dibujen alineadas.
 
 Pruebas automáticas (se corren solas en cada compilación):
 
@@ -82,6 +83,22 @@ lleve bombo o hi-hat de pie.
 
 VexFlow (el dibujo de partituras) pesa 380 KB, así que se descarga aparte y
 solo al abrir un ejercicio: la app arranca con 13 KB.
+
+## Sonido de la batería
+
+Son grabaciones de una batería real: pack **Virtuosity Drums** de Versilian
+Studios, licencia **CC0 1.0** (dominio público). Ver `public/sonidos/CREDITOS.md`.
+Pesan 218 KB en total. Para regenerarlos:
+
+```bash
+npm run samples
+```
+
+Ese comando no descarga el pack entero (1,2 GB): lee el índice del ZIP remoto
+por rangos y baja solo los trece archivos que usamos, unos 7 MB.
+
+Si los sonidos no se pueden cargar, la app no se queda muda: hay una batería
+sintetizada de respaldo en `src/audio/bateria.ts`.
 
 ## Contenido
 

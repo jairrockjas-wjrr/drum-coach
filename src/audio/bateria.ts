@@ -1,13 +1,65 @@
-// Batería sintetizada con Web Audio. Sin samples: todo se genera en el momento,
-// así la app pesa poco y funciona sin descargar nada.
+// Batería de la app.
 //
-// Cada pieza se arma con dos ingredientes:
-//  - Ruido blanco filtrado (parches, platillos, escobillas del sonido).
-//  - Osciladores con la afinación cayendo (el "cuerpo" del bombo y los toms).
+// Suena con grabaciones de una batería de verdad (ver public/sonidos/CREDITOS.md:
+// pack Virtuosity Drums de Versilian Studios, licencia CC0 / dominio público).
+// Pesan 218 KB en total, se descargan una vez y quedan guardadas para usarlas
+// sin internet.
+//
+// Si por lo que sea no se pueden cargar (sin red la primera vez, por ejemplo),
+// la app no se queda muda: hay una batería sintetizada de respaldo, hecha con
+// ruido filtrado y osciladores. Nunca suena igual de bien, pero deja practicar.
+//
 // Todo se programa con instantes exactos del reloj de audio, igual que el click.
 
 import { obtenerSalidaBateria } from './contexto'
 import type { Pieza } from '../ejercicios/tipos'
+
+/**
+ * Archivo de cada pieza. El pack solo trae dos toms, así que el de piso es el
+ * tom grave con la afinación bajada.
+ */
+const ARCHIVOS: Record<Pieza, { archivo: string; velocidad?: number }> = {
+  bombo: { archivo: 'bombo' },
+  tarola: { archivo: 'tarola' },
+  tarolaAro: { archivo: 'tarolaAro' },
+  aro: { archivo: 'aro' },
+  hiHatCerrado: { archivo: 'hiHatCerrado' },
+  hiHatAbierto: { archivo: 'hiHatAbierto' },
+  hiHatPedal: { archivo: 'hiHatPedal' },
+  ride: { archivo: 'ride' },
+  campana: { archivo: 'campana' },
+  crash: { archivo: 'crash' },
+  tomAgudo: { archivo: 'tomAgudo' },
+  tomMedio: { archivo: 'tomMedio' },
+  tomPiso: { archivo: 'tomMedio', velocidad: 0.76 },
+}
+
+const sonidos = new Map<string, AudioBuffer>()
+let cargando: Promise<void> | null = null
+
+/** ¿Están listos los sonidos reales? */
+export const haySonidosReales = (): boolean => sonidos.size > 0
+
+/**
+ * Descarga y prepara los sonidos de la batería. Se puede llamar varias veces:
+ * solo descarga la primera. Si falla, la app sigue con la batería sintetizada.
+ */
+export function cargarBateria(contexto: AudioContext): Promise<void> {
+  if (cargando) return cargando
+  const nombres = [...new Set(Object.values(ARCHIVOS).map((a) => a.archivo))]
+  cargando = Promise.all(
+    nombres.map(async (nombre) => {
+      try {
+        const respuesta = await fetch(`${import.meta.env.BASE_URL}sonidos/${nombre}.m4a`)
+        if (!respuesta.ok) throw new Error(`no se pudo bajar ${nombre}`)
+        sonidos.set(nombre, await contexto.decodeAudioData(await respuesta.arrayBuffer()))
+      } catch (error) {
+        console.warn('Sonido no disponible, se usará el sintetizado:', nombre, error)
+      }
+    }),
+  ).then(() => undefined)
+  return cargando
+}
 
 /** Ruido blanco reutilizable: generarlo en cada golpe sería un desperdicio. */
 let bufferRuido: AudioBuffer | null = null
@@ -119,6 +171,44 @@ function tono(
  * Devuelve los nodos creados, para poder callarlos si hace falta.
  */
 export function programarPieza(
+  contexto: AudioContext,
+  pieza: Pieza,
+  opciones: OpcionesGolpe,
+): AudioNode[] {
+  const receta = ARCHIVOS[pieza]
+  const sonido = sonidos.get(receta.archivo)
+  if (sonido) return reproducirSample(contexto, sonido, receta.velocidad ?? 1, opciones)
+  return sintetizarPieza(contexto, pieza, opciones)
+}
+
+/** Reproduce la grabación de una pieza. */
+function reproducirSample(
+  contexto: AudioContext,
+  sonido: AudioBuffer,
+  velocidad: number,
+  { cuando, volumen = 1, acento = false }: OpcionesGolpe,
+): AudioNode[] {
+  const fuente = contexto.createBufferSource()
+  fuente.buffer = sonido
+  // Un pelín de variación de afinación en cada golpe: sin esto, repetir la
+  // misma nota suena a máquina.
+  fuente.playbackRate.value = velocidad * (1 + (Math.random() - 0.5) * 0.02)
+
+  const ganancia = contexto.createGain()
+  ganancia.gain.value = volumen * (acento ? 1.3 : 1)
+
+  fuente.connect(ganancia)
+  ganancia.connect(obtenerSalidaBateria())
+  fuente.start(cuando)
+  fuente.onended = () => {
+    fuente.disconnect()
+    ganancia.disconnect()
+  }
+  return [ganancia]
+}
+
+/** Batería sintetizada de respaldo, por si no se pudieron cargar los sonidos. */
+function sintetizarPieza(
   contexto: AudioContext,
   pieza: Pieza,
   { cuando, volumen = 1, acento = false }: OpcionesGolpe,
