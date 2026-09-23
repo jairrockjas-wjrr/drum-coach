@@ -349,12 +349,11 @@ export function dibujarPartitura(
     const y = MARGEN_ARRIBA + desplazamiento + renglon * altoRenglon
 
     for (let i = desde; i < hasta; i++) {
-      // La clave y el compás se escriben una sola vez, al principio de todo.
-      // Aun así, TODAS las copias reservan ese mismo hueco al empezar: si no,
-      // medirían distinto y el salto de una vuelta a otra se notaría.
-      const esInicioDeCopia = i % ejercicio.compases.length === 0
-      const conHueco = unaLinea ? esInicioDeCopia : i === desde
-      const conClave = unaLinea ? i === 0 : i === desde
+      // En la tira no se escribe clave ni compás en ninguna parte: van en la
+      // línea de estado. Así TODOS los compases miden exactamente lo mismo, el
+      // cursor avanza a velocidad constante y el salto de vuelta es exacto.
+      const conHueco = unaLinea ? false : i === desde
+      const conClave = conHueco
       const anchoCompas = anchoCompasBase + (conHueco ? EXTRA_PRIMERO : 0)
       const stave = new Stave(x, y, anchoCompas)
 

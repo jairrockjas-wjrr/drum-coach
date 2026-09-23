@@ -595,7 +595,10 @@ a.barra__volver {
 .barra-ejercicio {
   display: flex;
   align-items: center;
-  gap: 4px;
+  /* Separación entre el volver, el metrónomo y los ajustes: los botones de
+     velocidad van pegados entre sí, pero lejos del de volver, que es donde
+     se tocaba el −5 sin querer. */
+  gap: 14px;
   padding: calc(env(safe-area-inset-top) + 8px) calc(env(safe-area-inset-right) + 8px) 8px
     calc(env(safe-area-inset-left) + 8px);
   background: var(--superficie);
@@ -636,7 +639,7 @@ a.barra__volver {
 }
 
 .icono--discreto {
-  width: 30px;
+  width: 26px;
 }
 
 /* --- Play/stop: el único botón con color --- */
@@ -682,13 +685,13 @@ a.barra__volver {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 0;
   min-width: 0;
 }
 
 .tempo__paso {
   flex: none;
-  min-width: 32px;
+  min-width: 30px;
   height: 42px;
   display: flex;
   align-items: center;

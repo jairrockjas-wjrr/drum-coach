@@ -4,7 +4,7 @@
 
 import { desbloquearAudio } from '../audio/contexto'
 import { EJERCICIOS } from '../ejercicios/catalogo'
-import type { Pieza } from '../ejercicios/tipos'
+import { ticksPorCompas, type Pieza } from '../ejercicios/tipos'
 import {
   crearReproductor,
   type EventoReproduccion,
@@ -92,6 +92,9 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   let porClave = new Map<string, NotaDibujada>()
   /** Dónde cae cada nota a lo largo de la tira, para deslizarla con la música. */
   let posiciones: { ticks: number; x: number }[] = []
+  /** Geometría de la tira: todos los compases miden lo mismo, así que basta
+   *  con saber dónde empieza el primero y cuánto mide cada uno. */
+  let geometria: { inicio: number; anchoCompas: number } | null = null
   const cola: EventoReproduccion[] = []
 
   const piezasUsadas = new Set<Pieza>()
@@ -330,21 +333,27 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     posiciones = [...puntos.entries()]
       .map(([ticks, x]) => ({ ticks, x }))
       .sort((a, b) => a.ticks - b.ticks)
+
+    // Los compases dibujados, para medir el paso constante de la tira.
+    const compases = [...hoja.querySelectorAll('.vf-stave')].map(
+      (el) => el.getBoundingClientRect().left - origenHoja,
+    )
+    geometria =
+      compases.length >= 2
+        ? { inicio: compases[0], anchoCompas: compases[1] - compases[0] }
+        : null
   }
 
-  /** Dónde cae en la tira un punto cualquiera del ejercicio (interpolando). */
+  /**
+   * Dónde cae en la tira un punto cualquiera del ejercicio.
+   * Como todos los compases miden lo mismo, es una cuenta directa: el tiempo
+   * se convierte en distancia a paso constante. Antes se interpolaba entre
+   * nota y nota y el cursor cambiaba de velocidad en cada compás.
+   */
   function xDeTicks(ticks: number): number | null {
-    if (posiciones.length < 2) return null
-    if (ticks <= posiciones[0].ticks) return posiciones[0].x
-    for (let i = 1; i < posiciones.length; i++) {
-      const anterior = posiciones[i - 1]
-      const actual = posiciones[i]
-      if (ticks <= actual.ticks) {
-        const avance = (ticks - anterior.ticks) / (actual.ticks - anterior.ticks)
-        return anterior.x + (actual.x - anterior.x) * avance
-      }
-    }
-    return posiciones[posiciones.length - 1].x
+    if (!geometria) return posiciones.length > 0 ? posiciones[0].x : null
+    const porCompas = ticksPorCompas(ejercicio!.compas)
+    return geometria.inicio + (ticks / porCompas) * geometria.anchoCompas
   }
 
   /**
