@@ -199,9 +199,9 @@ export function dibujarPartitura(
   // corchete del tresillo (26) y las dos filas de texto (hasta 49).
   const ALTO_RENGLON = 215
   const EXTRA_PRIMERO = 62 // lo que ocupan la clave y el compás de VexFlow
-  // En la tira las cifras las dibujamos nosotros y son más chicas, así que la
-  // cabecera necesita bastante menos sitio.
-  const ANCHO_CABECERA = 46
+  // Sitio para la clave y el compás en la tira. Justo el necesario: si sobra,
+  // queda un hueco muerto antes del primer compás.
+  const ANCHO_CABECERA = 60
   const AIRE = 34 // espacio de respeto a cada lado de la música
 
   // --- Primera pasada: armar la música y preguntarle a VexFlow cuánto sitio
@@ -357,19 +357,23 @@ export function dibujarPartitura(
     if (unaLinea) {
       const cabecera = new Stave(x, y, ANCHO_CABECERA)
       cabecera.addClef('percussion')
+      cabecera.addTimeSignature(`${ejercicio.compas.pulsos}/${ejercicio.compas.figura}`)
       cabecera.setContext(ctx).draw()
 
-      // El compás se dibuja a mano, no con VexFlow: el suyo sale enorme al
-      // agrandar la tira. Las líneas del pentagrama van de y+40 a y+80.
-      const svgCabecera = contenedor.querySelector('svg')
-      if (svgCabecera) {
-        // Las líneas del pentagrama caen en y+40, 50, 60, 70 y 80. Las cifras
-        // van pegadas a las dos de en medio, como en las partituras impresas.
-        const xCompas = x + 34
-        // La de arriba centrada en la segunda línea (y+50) y la de abajo en la
-        // cuarta (y+70): es donde van en una partitura impresa.
-        crearTexto(svgCabecera, xCompas, y + 56, String(ejercicio.compas.pulsos), 'compas-cifra')
-        crearTexto(svgCabecera, xCompas, y + 76, String(ejercicio.compas.figura), 'compas-cifra')
+      // El compás lo dibuja VexFlow con su tipografía musical, que es la que
+      // se ve en una partitura de verdad. Sale grande al agrandar la tira, así
+      // que se encoge sobre su propio centro: conserva la forma y el sitio,
+      // pegado a la línea de en medio.
+      const cifras = contenedor.querySelector('svg .vf-timesignature') as SVGGraphicsElement | null
+      if (cifras) {
+        const caja = cifras.getBBox()
+        const centroX = caja.x + caja.width / 2
+        const centroY = caja.y + caja.height / 2
+        const escala = 0.62
+        cifras.setAttribute(
+          'transform',
+          `translate(${centroX} ${centroY}) scale(${escala}) translate(${-centroX} ${-centroY})`,
+        )
       }
       x += ANCHO_CABECERA
     }
