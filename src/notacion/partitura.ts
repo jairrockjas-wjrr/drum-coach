@@ -348,12 +348,23 @@ export function dibujarPartitura(
     let x = MARGEN_IZQ
     const y = MARGEN_ARRIBA + desplazamiento + renglon * altoRenglon
 
+    // La tira empieza con un bloque suyo: clave y compás. Al ir aparte, los
+    // compases de música no cambian de ancho y la partitura tiene un
+    // principio claro en vez de arrancar a media vuelta.
+    if (unaLinea) {
+      const cabecera = new Stave(x, y, EXTRA_PRIMERO)
+      cabecera.addClef('percussion')
+      cabecera.addTimeSignature(`${ejercicio.compas.pulsos}/${ejercicio.compas.figura}`)
+      cabecera.setContext(ctx).draw()
+      x += EXTRA_PRIMERO
+    }
+
     for (let i = desde; i < hasta; i++) {
-      // En la tira, la clave y el compás se escriben una sola vez, al empezar
-      // del todo. Ese primer compás es el único más ancho; todos los demás
-      // miden igual, que es lo que mantiene el cursor a velocidad constante y
-      // el salto de vuelta exacto (la música se sigue en la copia del medio).
-      const conHueco = unaLinea ? i === 0 : i === desde
+      // En la tira, la clave y el compás no van dentro de ningún compás: se
+      // dibujan aparte, en un bloque propio al principio (ver más abajo). Así
+      // TODOS los compases miden lo mismo, el cursor avanza a velocidad
+      // constante y el salto de vuelta es exacto.
+      const conHueco = unaLinea ? false : i === desde
       const conClave = conHueco
       const anchoCompas = anchoCompasBase + (conHueco ? EXTRA_PRIMERO : 0)
       const stave = new Stave(x, y, anchoCompas)

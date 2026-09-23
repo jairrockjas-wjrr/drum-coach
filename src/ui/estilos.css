@@ -685,7 +685,8 @@ a.barra__volver {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0;
+  /* Agrupados, pero con su aire: ni repartidos por toda la barra ni pegados. */
+  gap: 5px;
   min-width: 0;
 }
 
@@ -713,7 +714,7 @@ a.barra__volver {
      en vez de repartirse por toda la barra. */
   flex: none;
   min-width: 62px;
-  padding: 0 2px;
+  padding: 0 5px;
   display: flex;
   align-items: baseline;
   justify-content: center;
@@ -822,13 +823,14 @@ a.barra__volver {
    del todo, para no repetirlo en cada vuelta. */
 .compas {
   flex: none;
-  padding: 1px 7px;
-  border-radius: 6px;
+  padding: 0 5px;
+  border-radius: 5px;
   background: var(--superficie-alta);
   border: 1px solid var(--borde);
-  color: var(--texto);
-  font-size: 13px;
-  font-weight: 700;
+  color: var(--texto-suave);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 /* --- Panel de ajustes que sube desde abajo --- */

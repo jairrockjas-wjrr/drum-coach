@@ -93,18 +93,18 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   /** Dónde cae cada nota a lo largo de la tira, para deslizarla con la música. */
   let posiciones: { ticks: number; x: number }[] = []
   /**
-   * Geometría de la copia del medio, que es la que se sigue al tocar: dónde
-   * empieza y cuánto mide cada compás. Se mide ahí y no en la primera copia
-   * porque el primer compás de todos lleva la clave y es más ancho.
+   * Geometría de la tira: dónde empieza el primer compás de música (después
+   * del bloque de clave y compás) y cuánto mide cada compás. Todos miden lo
+   * mismo, así que con eso basta para colocar cualquier punto.
    */
   let geometria: { inicio: number; anchoCompas: number } | null = null
 
-  /** Cuánto ocupa una vuelta entera, en ticks. */
-  const ticksDeUnaVuelta = (): number =>
-    ejercicio!.compases.length * ticksPorCompas(ejercicio!.compas)
-
-  /** Dónde se queda el punto que suena dentro de la pantalla. */
-  const ASOMO = 0.12
+  /**
+   * Dónde se queda el punto que suena dentro de la pantalla, como parte del
+   * ancho. Se calcula al dibujar para que, parada, la tira empiece justo en
+   * el borde (con la clave y el compás enteros) y al dar al play no se mueva.
+   */
+  let asomo = 0.2
   const cola: EventoReproduccion[] = []
 
   const piezasUsadas = new Set<Pieza>()
@@ -266,11 +266,12 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     porClave = new Map()
     for (const nota of notas) porClave.set(`${nota.compas}-${nota.voz}-${nota.indice}`, nota)
     medirPosiciones()
-    // Se arranca mostrando el primer compás de la copia del medio, en el mismo
-    // sitio donde luego se queda el cursor: así al dar al play no da ningún
-    // tirón, porque la partitura ya está colocada.
-    const inicio = xDeTicks(ticksDeUnaVuelta())
-    lienzo.scrollLeft = inicio === null ? 0 : Math.max(0, inicio - lienzo.clientWidth * ASOMO)
+    // Parada, la tira enseña el principio de la partitura: la clave, el
+    // compás y el primer golpe. El cursor arranca justo ahí, así que al dar
+    // al play no se mueve nada.
+    const inicio = xDeTicks(0) ?? 0
+    asomo = Math.min(0.4, Math.max(0.12, inicio / lienzo.clientWidth))
+    lienzo.scrollLeft = Math.max(0, inicio - lienzo.clientWidth * asomo)
   }
 
   async function pintarLeyenda(): Promise<void> {
@@ -313,8 +314,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       return
     }
 
-    // Siempre se sigue la copia del medio (ver el dibujo con copias: 3).
-    const compasDibujado = evento.compas + ejercicio!.compases.length
+    const compasDibujado = evento.compas + copiaDe(evento.vuelta) * ejercicio!.compases.length
     const nota = porClave.get(`${compasDibujado}-${evento.voz}-${evento.indice}`)
     if (!nota?.elemento) return
 
@@ -347,14 +347,14 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       .map(([ticks, x]) => ({ ticks, x }))
       .sort((a, b) => a.ticks - b.ticks)
 
-    // Los compases dibujados. Se mide la copia del medio (la que se sigue).
+    // El primer pentagrama dibujado es el bloque de clave y compás; la música
+    // empieza en el siguiente.
     const compases = [...hoja.querySelectorAll('.vf-stave')].map(
       (el) => el.getBoundingClientRect().left - origenHoja,
     )
-    const cuantos = ejercicio!.compases.length
     geometria =
-      compases.length >= cuantos + 2
-        ? { inicio: compases[cuantos], anchoCompas: compases[cuantos + 1] - compases[cuantos] }
+      compases.length >= 3
+        ? { inicio: compases[1], anchoCompas: compases[2] - compases[1] }
         : null
   }
 
@@ -367,11 +367,17 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   function xDeTicks(ticks: number): number | null {
     if (!geometria) return posiciones.length > 0 ? posiciones[0].x : null
     const porCompas = ticksPorCompas(ejercicio!.compas)
-    // Los ticks se cuentan desde el principio de la tira; la geometría está
-    // medida en la copia del medio, así que se le resta una vuelta.
-    const dentro = ticks - ticksDeUnaVuelta()
-    return geometria.inicio + (dentro / porCompas) * geometria.anchoCompas
+    return geometria.inicio + (ticks / porCompas) * geometria.anchoCompas
   }
+
+  /**
+   * En qué copia de la tira se sigue la música.
+   * La primera vuelta se toca en la copia 1, que es donde está el principio
+   * de la partitura; de la segunda en adelante, en la del medio, que tiene
+   * tira por delante y por detrás. El paso de una a otra es hacia adelante,
+   * así que no se nota, y los saltos siguientes caen sobre el mismo dibujo.
+   */
+  const copiaDe = (vuelta: number): number => (vuelta === 0 ? 0 : 1)
 
   /**
    * Desliza la tira pegada a la música, fotograma a fotograma, en vez de
@@ -382,10 +388,10 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     const absoluto = reproductor.posicionEnTicks(contexto.currentTime)
     if (absoluto === null) return
 
-    // Siempre dentro de la copia del medio.
     const porVuelta = reproductor.ticksDeUnaVuelta()
+    const vuelta = Math.floor(absoluto / porVuelta)
     const dentro = absoluto % porVuelta
-    const x = xDeTicks(dentro + porVuelta)
+    const x = xDeTicks(dentro + copiaDe(vuelta) * porVuelta)
     if (x === null) return
 
     // El punto que suena se queda cerca del borde izquierdo, dejando casi toda
@@ -393,7 +399,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     // coloca sin suavizado: la posición ya viene del reloj de audio, así que
     // el movimiento es continuo, y al cambiar de copia el salto cae sobre
     // música idéntica y no se nota.
-    lienzo.scrollLeft = Math.max(0, x - lienzo.clientWidth * ASOMO)
+    lienzo.scrollLeft = Math.max(0, x - lienzo.clientWidth * asomo)
   }
 
   function bucleVisual(): void {
