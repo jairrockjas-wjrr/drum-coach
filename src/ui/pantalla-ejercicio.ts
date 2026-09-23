@@ -290,6 +290,8 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     porClave = new Map()
     for (const nota of notas) porClave.set(`${nota.compas}-${nota.voz}-${nota.indice}`, nota)
     medirPosiciones()
+    vueltaNumerada = -1
+    numerarCompases(0)
     // Parada, la tira enseña el principio de la partitura: la clave, el
     // compás y el primer golpe. El cursor arranca justo ahí, así que al dar
     // al play no se mueve nada.
@@ -338,6 +340,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       return
     }
 
+    numerarCompases(evento.vuelta)
     const compasDibujado = evento.compas + copiaDe(evento.vuelta) * ejercicio!.compases.length
     const nota = porClave.get(`${compasDibujado}-${evento.voz}-${evento.indice}`)
     if (!nota?.elemento) return
@@ -402,6 +405,27 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
    * así que no se nota, y los saltos siguientes caen sobre el mismo dibujo.
    */
   const copiaDe = (vuelta: number): number => (vuelta === 0 ? 0 : 1)
+
+  /**
+   * Renumera los compases dibujados para que la cuenta sea corrida: al acabar
+   * el compás 4 viene el 5, no otra vez el 1. Como la tira son tres copias del
+   * ejercicio, cada vuelta se reparte así: la copia donde se está tocando
+   * lleva los números de esta vuelta, la de antes los de la anterior y la de
+   * después los de la siguiente.
+   */
+  let vueltaNumerada = -1
+  function numerarCompases(vuelta: number): void {
+    if (vuelta === vueltaNumerada) return
+    vueltaNumerada = vuelta
+    const cuantos = ejercicio!.compases.length
+    const copiaActual = copiaDe(vuelta)
+    const numeros = hoja.querySelectorAll('.numero-compas')
+    numeros.forEach((elemento, indice) => {
+      const copia = Math.floor(indice / cuantos)
+      const dentro = indice % cuantos
+      elemento.textContent = String((vuelta - copiaActual + copia) * cuantos + dentro + 1)
+    })
+  }
 
   /**
    * Desliza la tira pegada a la música, fotograma a fotograma, en vez de
@@ -481,6 +505,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
 
   /** Para del todo y vuelve al principio. */
   function detener(): void {
+    vueltaNumerada = -1
     reproductor?.detener()
     cancelAnimationFrame(animacion)
     cola.length = 0

@@ -354,8 +354,16 @@ export function dibujarPartitura(
     if (unaLinea) {
       const cabecera = new Stave(x, y, EXTRA_PRIMERO)
       cabecera.addClef('percussion')
-      cabecera.addTimeSignature(`${ejercicio.compas.pulsos}/${ejercicio.compas.figura}`)
       cabecera.setContext(ctx).draw()
+
+      // El compás se dibuja a mano, no con VexFlow: el suyo sale enorme al
+      // agrandar la tira. Las líneas del pentagrama van de y+40 a y+80.
+      const svgCabecera = contenedor.querySelector('svg')
+      if (svgCabecera) {
+        const xCompas = x + 46
+        crearTexto(svgCabecera, xCompas, y + 58, String(ejercicio.compas.pulsos), 'compas-cifra')
+        crearTexto(svgCabecera, xCompas, y + 78, String(ejercicio.compas.figura), 'compas-cifra')
+      }
       x += EXTRA_PRIMERO
     }
 
@@ -375,10 +383,19 @@ export function dibujarPartitura(
           stave.addTimeSignature(`${ejercicio.compas.pulsos}/${ejercicio.compas.figura}`)
         }
       }
-      // En la tira no se numeran los compases: como la música da vueltas, un
-      // número fijo mentiría a partir de la segunda. La cuenta corrida va en
-      // la línea de estado.
-      if (!unaLinea) stave.setMeasure(i + 1)
+      if (unaLinea) {
+        // En la tira el número del compás se dibuja aparte (clase
+        // "numero-compas") para poder renumerarlo en cada vuelta: así sigue
+        // 5, 6, 7… en vez de volver al 1.
+        const svgHoja = contenedor.querySelector('svg')
+        if (svgHoja) {
+          // Bien arriba: por encima de las barras de corchea, que suben hasta
+          // unos 8 px por encima del pentagrama.
+          crearTexto(svgHoja, x + 10, y - 26, String(i + 1), 'numero-compas')
+        }
+      } else {
+        stave.setMeasure(i + 1)
+      }
       stave.setContext(ctx).draw()
 
       const { voces, adornos, letreros, conTresillos } = armados[i]
