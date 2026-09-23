@@ -11,8 +11,9 @@
     "iconos": "node herramientas/generar-iconos.mjs",
     "prueba:logica": "node --import ./pruebas/resolver.mjs pruebas/logica.mjs",
     "prueba:ejercicios": "node --import ./pruebas/resolver.mjs pruebas/ejercicios.mjs",
-    "pruebas": "npm run prueba:logica && npm run prueba:ejercicios",
-    "samples": "node herramientas/traer-samples.mjs"
+    "pruebas": "npm run prueba:logica && npm run prueba:ejercicios && npm run prueba:lecciones",
+    "samples": "node herramientas/traer-samples.mjs",
+    "prueba:lecciones": "node --import ./pruebas/resolver.mjs pruebas/lecciones.mjs"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

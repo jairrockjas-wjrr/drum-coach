@@ -10,7 +10,7 @@ sin servidor y sin conexión: todos los datos se guardan en el propio teléfono.
 - [x] Fase 1 — Proyecto base, PWA y publicación automática
 - [x] Fase 2 — Metrónomo
 - [x] Fase 3 — Reproductor de ejercicios con partitura
-- [ ] Fase 4 — Lectura desde cero
+- [x] Fase 4 — Lectura desde cero
 - [ ] Fase 5 — Jazz
 - [ ] Fase 6 — Doble pedal
 - [ ] Fase 7 — Generador de remates
@@ -33,6 +33,9 @@ Páginas de prueba manuales (solo en desarrollo):
 - `/pruebas/partitura.html` — dibuja todas las partituras del catálogo y comprueba
   que las notas que suenan a la vez se dibujen alineadas.
 
+Las pruebas automáticas revisan también las lecciones: que sus ejemplos sean
+música correcta y que los ejercicios a los que mandan existan.
+
 Pruebas automáticas (se corren solas en cada compilación):
 
 ```bash
@@ -45,9 +48,10 @@ Al hacer `git push` a `main`, GitHub Actions compila y publica sola la app.
 
 ```
 src/
-  audio/      motor de sonido (AudioContext, click y batería sintetizada)
+  audio/      motor de sonido (AudioContext, click y batería)
   metronomo/  scheduler de lookahead y tipos del metrónomo
   ejercicios/ modelo de datos, catálogo, validador y reproductor
+  lecciones/  la ruta de lectura: explicaciones y ejemplos
   notacion/   dibujo de partituras con VexFlow
   ui/         pantallas, navegación y estilos
   sistema/    integración con el teléfono (PWA, pantalla encendida)

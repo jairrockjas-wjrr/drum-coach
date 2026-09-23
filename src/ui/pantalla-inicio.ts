@@ -40,7 +40,11 @@ const MODULOS: Modulo[] = [
     nota: 'se ven en partitura y se escuchan con la batería',
     ruta: '#/ejercicios',
   },
-  { nombre: 'Lectura desde cero', nota: 'Fase 4 · del pentagrama a los tresillos' },
+  {
+    nombre: 'Lectura desde cero',
+    nota: 'nueve lecciones: del pentagrama al swing',
+    ruta: '#/lectura',
+  },
   { nombre: 'Jazz', nota: 'Fase 5 · ride, comping e independencia' },
   { nombre: 'Doble pedal', nota: 'Fase 6 · velocidad y resistencia' },
   { nombre: 'Generador de remates', nota: 'Fase 7 · fills nuevos cada vez' },
@@ -86,7 +90,7 @@ export function montarPantallaInicio(raiz: HTMLElement): void {
       </div>
     </section>
 
-    <p class="pie">Versión 0.3 · Fase 3: ejercicios · compilación ${__COMPILACION__}</p>
+    <p class="pie">Versión 0.4 · Fase 4: lectura · compilación ${__COMPILACION__}</p>
   `
 
   const boton = raiz.querySelector<HTMLButtonElement>('#probar-audio')!

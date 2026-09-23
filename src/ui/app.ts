@@ -5,6 +5,8 @@ import { montarPantallaInicio } from './pantalla-inicio'
 import { montarMetronomo } from './pantalla-metronomo'
 import { montarListaEjercicios } from './pantalla-ejercicios'
 import { montarEjercicio } from './pantalla-ejercicio'
+import { montarLectura } from './pantalla-lectura'
+import { montarLeccion } from './pantalla-leccion'
 
 export function iniciarApp(raiz: HTMLElement): void {
   // Cada pantalla puede devolver una función para soltar lo que dejó abierto
@@ -24,6 +26,10 @@ export function iniciarApp(raiz: HTMLElement): void {
       montarListaEjercicios(raiz)
     } else if (ruta.startsWith('/ejercicio/')) {
       limpiar = montarEjercicio(raiz, ruta.slice('/ejercicio/'.length))
+    } else if (ruta === '/lectura') {
+      montarLectura(raiz)
+    } else if (ruta.startsWith('/leccion/')) {
+      limpiar = montarLeccion(raiz, ruta.slice('/leccion/'.length))
     } else {
       montarPantallaInicio(raiz)
     }
