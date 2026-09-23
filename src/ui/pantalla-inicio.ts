@@ -41,17 +41,17 @@ const MODULOS: Modulo[] = [
     ruta: '#/figuras',
   },
   {
+    nombre: 'Lectura desde cero',
+    nota: 'nueve lecciones: del pentagrama al swing',
+    ruta: '#/lectura',
+  },
+  {
     nombre: 'Ejercicios con partitura',
     nota: 'se ven en partitura y se escuchan con la batería',
     ruta: '#/ejercicios',
   },
   { nombre: 'Generador de remates', nota: 'próxima fase · fills nuevos cada vez' },
   { nombre: 'Generador de partitura', nota: 'en proceso' },
-  {
-    nombre: 'Lectura desde cero',
-    nota: 'nueve lecciones: del pentagrama al swing',
-    ruta: '#/lectura',
-  },
 ]
 
 export function montarPantallaInicio(raiz: HTMLElement): void {
