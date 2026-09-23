@@ -2,7 +2,16 @@
 // los ejercicios donde practicarla.
 
 import { desbloquearAudio } from '../audio/contexto'
-import { cargarBateria, haySonidosReales, KIT_POR_DEFECTO, type Kit } from '../audio/bateria'
+import {
+  NOMBRE_PIEZA,
+  cargarBateria,
+  haySonidosReales,
+  programarPieza,
+  KIT_POR_DEFECTO,
+  type Kit,
+} from '../audio/bateria'
+import { ORDEN_LEYENDA } from '../notacion/piezas'
+import type { Pieza } from '../ejercicios/tipos'
 import { EJERCICIOS } from '../ejercicios/catalogo'
 import type { Ejercicio } from '../ejercicios/tipos'
 import { crearReproductor, type Reproductor } from '../ejercicios/reproductor'
@@ -56,6 +65,16 @@ export function montarLeccion(raiz: HTMLElement, id: string): () => void {
       ${leccion.texto.map((parrafo) => `<p>${parrafo}</p>`).join('')}
     </section>
 
+    ${
+      leccion.leyenda
+        ? `<section class="tarjeta">
+             <h2>Cada pieza en su sitio</h2>
+             <p class="nota" style="margin-top:0">Pulsa cada una para escucharla.</p>
+             <div class="leyenda" id="leyenda"></div>
+           </section>`
+        : ''
+    }
+
     ${leccion.ejemplos
       .map(
         (ejemplo, i) => `
@@ -92,9 +111,22 @@ export function montarLeccion(raiz: HTMLElement, id: string): () => void {
     </button>
   `
 
+  /** Hace sonar una pieza suelta, para oírla desde la leyenda. */
+  const sonarPieza = async (pieza: Pieza): Promise<void> => {
+    contexto = await desbloquearAudio()
+    if (!haySonidosReales(kit)) await cargarBateria(contexto, kit)
+    programarPieza(contexto, pieza, { cuando: contexto.currentTime + 0.02, volumen: 0.9 })
+  }
+
   // --- Dibujo de los ejemplos (VexFlow se descarga aparte) ---
   const pintar = async (): Promise<void> => {
-    const { dibujarPartitura } = await import('../notacion/partitura')
+    const { dibujarPartitura, dibujarLeyenda } = await import('../notacion/partitura')
+
+    const leyenda = raiz.querySelector<HTMLDivElement>('#leyenda')
+    if (leyenda) {
+      dibujarLeyenda(leyenda, ORDEN_LEYENDA, NOMBRE_PIEZA, (pieza) => void sonarPieza(pieza))
+    }
+
     leccion.ejemplos.forEach((ejemplo, i) => {
       const hoja = raiz.querySelector<HTMLDivElement>(`#hoja-${i}`)
       if (!hoja) return

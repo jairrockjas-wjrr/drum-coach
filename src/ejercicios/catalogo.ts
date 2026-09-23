@@ -57,6 +57,41 @@ const CUATRO_CUARTOS = { pulsos: 4, figura: 4 } as const
 export const EJERCICIOS: Ejercicio[] = [
   // ------------------------------------------------------------------
   {
+    id: 'piezas-del-kit',
+    titulo: 'Un golpe en cada pieza',
+    estilo: 'lectura',
+    nivel: 1,
+    compas: CUATRO_CUARTOS,
+    bpmSugerido: 60,
+    descripcion: 'Recorre el kit entero, una pieza por tiempo, de arriba abajo del pentagrama.',
+    consejo: 'Mira dónde se escribe cada una mientras suena: eso es lo que hay que memorizar.',
+    compases: [
+      // Los platillos, que son lo que está más arriba.
+      {
+        manos: [negra(['crash']), negra(['hiHatCerrado']), negra(['hiHatAbierto']), negra(['ride'])],
+        pies: [],
+      },
+      // La campana y los toms.
+      {
+        manos: [negra(['campana']), negra(['tomAgudo']), negra(['tomMedio']), negra(['tomPiso'])],
+        pies: [],
+      },
+      // La tarola y sus dos formas de golpearla.
+      {
+        manos: [negra(['tarola']), negra(['aro']), negra(['tarolaAro']), calla('negra')],
+        pies: [],
+      },
+      // Y lo que se toca con los pies, que se escribe por debajo.
+      {
+        manos: [],
+        pies: [negra(['bombo']), calla('negra'), negra(['hiHatPedal']), calla('negra')],
+      },
+      remate(2),
+    ],
+  },
+
+  // ------------------------------------------------------------------
+  {
     id: 'lectura-negras',
     titulo: 'Negras y silencios',
     estilo: 'lectura',

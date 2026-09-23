@@ -36,6 +36,7 @@ export const LECCIONES: Leccion[] = [
       'Los platillos se escriben con una x en vez de una cabeza redonda. Así distingues de un vistazo un golpe de parche de uno de metal.',
       'Y hay un detalle que te va a servir siempre: lo que tocas con las manos lleva la plica (el palito) hacia arriba, y lo que tocas con los pies, hacia abajo. Por eso el bombo y el hi-hat de pie se ven colgando por debajo.',
     ],
+    leyenda: true,
     ejemplos: [
       {
         titulo: 'Una pieza por tiempo',
@@ -50,7 +51,7 @@ export const LECCIONES: Leccion[] = [
         ],
       },
     ],
-    practica: [],
+    practica: ['piezas-del-kit'],
   },
 
   {

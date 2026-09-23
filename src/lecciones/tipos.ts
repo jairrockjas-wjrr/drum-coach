@@ -25,6 +25,11 @@ export interface Leccion {
   /** La explicación, en párrafos cortos. */
   texto: string[]
   ejemplos: Ejemplo[]
+  /**
+   * Muestra todas las piezas del kit dibujadas en su sitio del pentagrama,
+   * y se puede tocar cada una para oírla.
+   */
+  leyenda?: boolean
   /** Ids de ejercicios del catálogo para practicar esta lección. */
   practica: string[]
 }
