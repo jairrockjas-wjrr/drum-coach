@@ -9,6 +9,8 @@ import {
   Beam,
   Dot,
   Formatter,
+  Fraction,
+  GhostNote,
   Renderer,
   type RenderContext,
   Stave,
@@ -72,46 +74,50 @@ export function conteoDeNota(nota: Nota, ticksEnElCompas: number, porPulso: numb
   return tabla[dentro] ?? ''
 }
 
-/** Convierte una nota nuestra en una nota de VexFlow. */
-function crearNotaVex(nota: Nota, voz: Voz): StaveNote {
+/**
+ * Convierte una nota nuestra en una nota de VexFlow.
+ *
+ * Los silencios solo se escriben en la voz de las manos, que es la que se lee.
+ * En la de los pies se deja un hueco invisible, como en las partituras de
+ * batería publicadas: escribir los silencios del bombo llena el pentagrama de
+ * garabatos y no aporta nada.
+ */
+function crearNotaVex(nota: Nota, voz: Voz): StaveNote | GhostNote {
   const duracion = DURACION[nota.figura]
   const haciaArriba = voz === 'manos'
 
-  const vex = esSilencio(nota)
-    ? new StaveNote({
-        // Los silencios se escriben en medio del pentagrama.
-        keys: [haciaArriba ? 'c/5' : 'f/4'],
-        duration: duracion + 'r',
-      })
-    : new StaveNote({
-        keys: nota.piezas.map((pieza) => SITIO[pieza].clave),
-        duration: duracion,
-        stemDirection: haciaArriba ? Stem.UP : Stem.DOWN,
-      })
+  if (esSilencio(nota)) {
+    if (!haciaArriba) return new GhostNote({ duration: duracion })
+    // En medio del pentagrama, que es donde van los silencios de percusión.
+    const silencio = new StaveNote({ keys: ['b/4'], duration: duracion + 'r' })
+    if (nota.puntillo) Dot.buildAndAttach([silencio])
+    return silencio
+  }
+
+  const vex = new StaveNote({
+    keys: nota.piezas.map((pieza) => SITIO[pieza].clave),
+    duration: duracion,
+    stemDirection: haciaArriba ? Stem.UP : Stem.DOWN,
+  })
 
   if (nota.puntillo) Dot.buildAndAttach([vex])
 
-  if (!esSilencio(nota)) {
-    // El rimshot se escribe como tarola acentuada.
-    if (nota.piezas.includes('tarolaAro') || nota.acento) {
-      vex.addModifier(new Articulation('a>').setPosition(haciaArriba ? 3 : 4), 0)
-    }
-    // El hi-hat abierto lleva un círculo encima.
-    if (nota.piezas.includes('hiHatAbierto')) {
-      vex.addModifier(
-        new Annotation('o').setVerticalJustification(Annotation.VerticalJustify.TOP),
-        0,
-      )
-    }
+  // El rimshot se escribe como tarola acentuada.
+  if (nota.piezas.includes('tarolaAro') || nota.acento) {
+    vex.addModifier(new Articulation('a>').setPosition(haciaArriba ? 3 : 4), 0)
+  }
+  // El hi-hat abierto lleva un círculo encima.
+  if (nota.piezas.includes('hiHatAbierto')) {
+    vex.addModifier(new Annotation('o').setVerticalJustification(Annotation.VerticalJustify.TOP), 0)
   }
 
   return vex
 }
 
 /** Agrupa los tresillos de tres en tres para dibujar su corchete. */
-function armarTresillos(notas: Nota[], vexNotas: StaveNote[]): Tuplet[] {
+function armarTresillos(notas: Nota[], vexNotas: (StaveNote | GhostNote)[]): Tuplet[] {
   const tresillos: Tuplet[] = []
-  let grupo: StaveNote[] = []
+  let grupo: (StaveNote | GhostNote)[] = []
   notas.forEach((nota, i) => {
     if (nota.tresillo) {
       grupo.push(vexNotas[i])
@@ -142,8 +148,11 @@ export function dibujarPartitura(
   const ticksCompas = ejercicio.compas.pulsos * porPulso
 
   const MARGEN_IZQ = 10
-  const MARGEN_ARRIBA = 24
-  const ALTO_RENGLON = 118
+  // Hay que dejar sitio de sobra arriba (platillos por encima del pentagrama,
+  // corchetes de tresillo) y abajo (bombo, hi-hat de pie y las dos filas de
+  // texto). Apretarlo es lo que hacía que se encimara todo.
+  const MARGEN_ARRIBA = 46
+  const ALTO_RENGLON = 168
   const EXTRA_PRIMERO = 62 // lo que ocupan la clave y el compás
   const AIRE = 34 // espacio de respeto a cada lado de la música
 
@@ -158,7 +167,7 @@ export function dibujarPartitura(
     conTresillos: boolean
   }
 
-  const dibujadas: (NotaDibujada & { vex: StaveNote })[] = []
+  const dibujadas: (NotaDibujada & { vex: StaveNote | GhostNote })[] = []
   let ticksAcumulados = 0
 
   const armados: CompasArmado[] = ejercicio.compases.map((compas, i) => {
@@ -198,7 +207,18 @@ export function dibujarPartitura(
       vozVex.addTickables(vexNotas)
       voces.push(vozVex)
 
-      for (const barra of Beam.generateBeams(vexNotas)) adornos.push(barra)
+      // Las barras se agrupan por tiempo (un grupo por negra en 4/4), que es
+      // como se imprimen las hojas de lectura: así se ve dónde cae cada pulso.
+      //
+      // maintainStemDirections es imprescindible: sin esa opción VexFlow
+      // recalcula la dirección de las plicas al hacer las barras y voltea las
+      // manos hacia abajo, con lo que el hi-hat acababa chocando con el bombo.
+      const porTiempo = new Fraction(1, ejercicio.compas.figura)
+      const barras = Beam.generateBeams(vexNotas, {
+        groups: [porTiempo],
+        maintainStemDirections: true,
+      })
+      for (const barra of barras) adornos.push(barra)
       for (const tresillo of tresillos) adornos.push(tresillo)
     }
 
@@ -298,12 +318,12 @@ export function dibujarPartitura(
         if (letrero.mano) {
           ctx.setFont('system-ui, sans-serif', 11, 'bold')
           ctx.setFillStyle('#1f2937')
-          ctx.fillText(letrero.mano, posX - 3, yBase + 22)
+          ctx.fillText(letrero.mano, posX - 3, yBase + 32)
         }
         if (letrero.conteo) {
           ctx.setFont('system-ui, sans-serif', 11, 'normal')
           ctx.setFillStyle('#9aa3b2')
-          ctx.fillText(letrero.conteo, posX - 3, yBase + 38)
+          ctx.fillText(letrero.conteo, posX - 3, yBase + 49)
         }
       }
       ctx.restore()
