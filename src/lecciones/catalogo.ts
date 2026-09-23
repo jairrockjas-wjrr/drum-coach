@@ -40,24 +40,43 @@ export const LECCIONES: Leccion[] = [
     ejemplos: [
       {
         titulo: 'Una pieza por tiempo',
-        pie: 'Nunca dos a la vez: primero las manos, con la plica hacia arriba; después los pies, colgando por debajo.',
+        pie: 'Las trece piezas del kit, de arriba abajo del pentagrama. Nunca suenan dos a la vez.',
         compas: CUATRO_CUARTOS,
         bpm: 60,
         // Un golpe por tiempo y uno solo: si sonaran dos piezas juntas no se
         // distinguiría cuál es cuál, que es justo lo que se está enseñando.
+        // El orden es el mismo que el de la leyenda de arriba, para poder ir
+        // comparando nota por nota.
         compases: [
+          // Los platillos, que se escriben con x y van arriba.
           {
-            manos: [negra(['crash']), negra(['hiHatCerrado']), negra(['tarola']), negra(['tomAgudo'])],
+            manos: [
+              negra(['crash']),
+              negra(['hiHatCerrado']),
+              negra(['hiHatAbierto']),
+              negra(['ride']),
+            ],
             pies: [],
           },
+          // La campana del ride y los toms, bajando.
+          {
+            manos: [
+              negra(['campana']),
+              negra(['tomAgudo']),
+              negra(['tomMedio']),
+              negra(['tomPiso']),
+            ],
+            pies: [],
+          },
+          // La tarola y sus tres formas de golpearla.
+          {
+            manos: [negra(['tarola']), negra(['aro']), negra(['tarolaAro']), calla('negra')],
+            pies: [],
+          },
+          // Y lo que se toca con los pies, colgando por debajo.
           {
             manos: [],
-            pies: [
-              negra(['bombo']),
-              negra(['hiHatPedal']),
-              negra(['bombo']),
-              negra(['hiHatPedal']),
-            ],
+            pies: [negra(['bombo']), negra(['hiHatPedal']), calla('negra'), calla('negra')],
           },
         ],
       },

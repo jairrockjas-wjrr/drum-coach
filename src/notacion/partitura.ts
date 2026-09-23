@@ -203,6 +203,8 @@ export function dibujarPartitura(
   // queda un hueco muerto antes del primer compás.
   const ANCHO_CABECERA = 60
   const AIRE = 34 // espacio de respeto a cada lado de la música
+  // Por debajo de esto un compás se lee mal por mucho que a VexFlow le quepa.
+  const ANCHO_MINIMO_COMPAS = 100
 
   // --- Primera pasada: armar la música y preguntarle a VexFlow cuánto sitio
   // necesita de verdad. Antes lo estimaba a ojo y la música se salía del papel.
@@ -323,7 +325,13 @@ export function dibujarPartitura(
       ? // El primero (menos compases por renglón = notas más grandes) que quepa de alto.
         (opcionesReparto.find((o) => o.altoNecesario <= alto) ??
           opcionesReparto[opcionesReparto.length - 1]).cuantos
-      : ([4, 2, 1].find((cuantos) => anchoCompasNecesario * cuantos <= util * 1.2) ?? 1)
+      : // Sin alto que respetar, manda el ancho: cabe lo que quepa, pero con un
+        // mínimo por compás. Lo que de verdad necesita VexFlow puede ser muy
+        // poco (cuatro negras ocupan nada) y en el iPhone salían cuatro
+        // compases aplastados en un renglón, ilegibles.
+        ([4, 2, 1].find(
+          (cuantos) => Math.max(anchoCompasNecesario, ANCHO_MINIMO_COMPAS) * cuantos <= util,
+        ) ?? 1)
 
   const elegido = medir(porRenglon)
   const renglones = elegido.renglones
