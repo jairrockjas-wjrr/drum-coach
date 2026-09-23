@@ -26,6 +26,21 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* En iPhone, tocar dos veces seguidas hace zoom. Al practicar eso pasa todo
+   el rato (tap tempo, subir el BPM a golpes), así que se desactiva: se sigue
+   pudiendo deslizar la partitura y hacer zoom con dos dedos. */
+html,
+button,
+a,
+label,
+input,
+select,
+summary,
+.lienzo,
+.hoja {
+  touch-action: manipulation;
+}
+
 html,
 body {
   margin: 0;
