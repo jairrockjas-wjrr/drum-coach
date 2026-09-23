@@ -54,6 +54,37 @@ function remate(porTom: 1 | 2 | 3 | 4, pies: Nota[] = []): CompasEscrito {
 
 const CUATRO_CUARTOS = { pulsos: 4, figura: 4 } as const
 
+/** El kit entero en el orden en que se lee el pentagrama, de arriba abajo. */
+const PIEZAS_UNA_A_UNA: Pieza[] = [
+  'crash',
+  'hiHatCerrado',
+  'hiHatAbierto',
+  'ride',
+  'campana',
+  'tomAgudo',
+  'tomMedio',
+  'tomPiso',
+  'tarola',
+  'aro',
+  'tarolaAro',
+  'bombo',
+  'hiHatPedal',
+]
+
+/** Piezas que se tocan con el pie: van en la voz de abajo del pentagrama. */
+const DE_PIE: Pieza[] = ['bombo', 'hiHatPedal']
+
+/**
+ * Un compás dedicado a una sola pieza: golpe en el primer tiempo y silencio
+ * hasta el final. La voz que no toca se deja vacía, que es como se escribe.
+ */
+function sola(pieza: Pieza): CompasEscrito {
+  // Tres silencios de negra en vez de uno de blanca: así el conteo de abajo
+  // marca los cuatro tiempos y se ve cuánto dura el hueco.
+  const voz = [negra([pieza]), calla('negra'), calla('negra'), calla('negra')]
+  return DE_PIE.includes(pieza) ? { manos: [], pies: voz } : { manos: voz, pies: [] }
+}
+
 export const EJERCICIOS: Ejercicio[] = [
   // ------------------------------------------------------------------
   {
@@ -63,33 +94,13 @@ export const EJERCICIOS: Ejercicio[] = [
     nivel: 1,
     compas: CUATRO_CUARTOS,
     bpmSugerido: 60,
-    descripcion: 'Recorre el kit entero, un golpe en cada tiempo, de arriba abajo del pentagrama.',
-    consejo: 'Mira dónde se escribe cada una mientras suena: eso es lo que hay que memorizar.',
-    // Todo va en negras y ningún tiempo queda mudo: la idea es oír una pieza a
-    // la vez, bien separada de la siguiente. Por eso este ejercicio tampoco
-    // lleva remate al final, que metería dos golpes por tiempo.
-    compases: [
-      // Los platillos, que son lo que está más arriba.
-      {
-        manos: [negra(['crash']), negra(['hiHatCerrado']), negra(['hiHatAbierto']), negra(['ride'])],
-        pies: [],
-      },
-      // La campana y los toms, bajando.
-      {
-        manos: [negra(['campana']), negra(['tomAgudo']), negra(['tomMedio']), negra(['tomPiso'])],
-        pies: [],
-      },
-      // La tarola y sus tres formas de golpearla, y el bombo entrando al final.
-      {
-        manos: [negra(['tarola']), negra(['aro']), negra(['tarolaAro']), calla('negra')],
-        pies: [calla('negra'), calla('negra'), calla('negra'), negra(['bombo'])],
-      },
-      // Los pies, que se escriben por debajo, y un crash para cerrar.
-      {
-        manos: [calla('negra'), calla('negra'), calla('negra'), negra(['crash'])],
-        pies: [negra(['bombo']), negra(['hiHatPedal']), negra(['bombo']), calla('negra')],
-      },
-    ],
+    descripcion: 'Una sola pieza por compás: suena, se calla y entra la siguiente.',
+    consejo: 'Mira dónde se escribe la nota mientras suena. El compás entero es para esa pieza y nada más.',
+    // Cada pieza tiene su propio compás: un golpe en el primer tiempo y tres
+    // tiempos de silencio. Así no se encima con nada y da tiempo de leerla,
+    // oírla y saber cuál es antes de que entre la siguiente. Por lo mismo este
+    // ejercicio no lleva remate al final.
+    compases: PIEZAS_UNA_A_UNA.map(sola),
   },
 
   // ------------------------------------------------------------------

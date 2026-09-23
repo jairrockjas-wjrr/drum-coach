@@ -77,11 +77,15 @@ const POR_DEFECTO: Preferencias = {
   sincronia: 0,
 }
 
-export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
+export function montarEjercicio(raiz: HTMLElement, id: string, desde = ''): () => void {
+  // De dónde vino: si entraste desde una lección, el botón de volver regresa a
+  // esa lección. Si no, a la lista de ejercicios.
+  const atras = desde.startsWith('/') ? `#${desde}` : '#/ejercicios'
+
   const ejercicio = EJERCICIOS.find((e) => e.id === id)
   if (!ejercicio) {
     raiz.innerHTML = `
-      <header class="barra"><a class="barra__volver" href="#/ejercicios">‹ Ejercicios</a></header>
+      <header class="barra"><a class="barra__volver" href="${atras}">‹ Volver</a></header>
       <p class="nota">Ese ejercicio ya no existe.</p>`
     return () => {}
   }
@@ -135,7 +139,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
 
   raiz.innerHTML = `
     <header class="barra-ejercicio">
-      <a class="icono icono--discreto" href="#/ejercicios" aria-label="Volver a los ejercicios">
+      <a class="icono icono--discreto" href="${atras}" aria-label="Volver">
         ${icono('volver')}
       </a>
 

@@ -17,7 +17,13 @@ export function iniciarApp(raiz: HTMLElement): void {
     limpiar?.()
     limpiar = null
 
-    const ruta = location.hash.replace(/^#/, '')
+    // La dirección puede traer de dónde vienes (#/ejercicio/x?desde=/leccion/y),
+    // para que el botón de volver regrese al mismo módulo y no siempre a la
+    // lista de ejercicios.
+    const completa = location.hash.replace(/^#/, '')
+    const corte = completa.indexOf('?')
+    const ruta = corte === -1 ? completa : completa.slice(0, corte)
+    const desde = corte === -1 ? '' : new URLSearchParams(completa.slice(corte)).get('desde') ?? ''
     if (ruta === '/metronomo') {
       limpiar = montarMetronomo(raiz, () => {
         location.hash = ''
@@ -25,7 +31,7 @@ export function iniciarApp(raiz: HTMLElement): void {
     } else if (ruta === '/ejercicios') {
       montarListaEjercicios(raiz)
     } else if (ruta.startsWith('/ejercicio/')) {
-      limpiar = montarEjercicio(raiz, ruta.slice('/ejercicio/'.length))
+      limpiar = montarEjercicio(raiz, ruta.slice('/ejercicio/'.length), desde)
     } else if (ruta === '/lectura') {
       montarLectura(raiz)
     } else if (ruta.startsWith('/leccion/')) {

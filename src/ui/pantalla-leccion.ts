@@ -95,7 +95,7 @@ export function montarLeccion(raiz: HTMLElement, id: string): () => void {
                ${practicables
                  .map(
                    (ejercicio) => `
-                 <a class="boton modulo modulo--listo" href="#/ejercicio/${ejercicio.id}">
+                 <a class="boton modulo modulo--listo" href="#/ejercicio/${ejercicio.id}?desde=/leccion/${leccion.id}">
                    <span>${ejercicio.titulo}</span>
                    <small>${ejercicio.descripcion}</small>
                  </a>`,
