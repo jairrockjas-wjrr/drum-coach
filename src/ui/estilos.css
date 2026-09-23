@@ -976,7 +976,8 @@ a.barra__volver {
 /* Las cifras del compás en la partitura: las de VexFlow salen enormes al
    agrandar la tira, así que se dibujan aparte y a su tamaño. */
 .compas-cifra {
-  font: 700 16px system-ui, -apple-system, sans-serif;
+  /* 13 px para que cada cifra quepa dentro de su espacio (10 px de alto). */
+  font: 700 13px system-ui, -apple-system, sans-serif;
   fill: #1f2937;
   text-anchor: middle;
 }
