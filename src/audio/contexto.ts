@@ -86,3 +86,16 @@ if (typeof document !== 'undefined') {
     }
   })
 }
+
+/**
+ * Cuánto tarda en oírse lo que se programa: el sonido sale del navegador y
+ * todavía tiene que pasar por el sistema y el altavoz. Si no se tiene en
+ * cuenta, la luz del cursor va por delante del golpe. Con auriculares
+ * Bluetooth el retraso es mucho mayor y el navegador no siempre lo sabe, por
+ * eso la app deja además un ajuste fino a mano.
+ */
+export function latenciaDeSalida(contexto: AudioContext): number {
+  const propia = contexto.outputLatency
+  if (typeof propia === 'number' && propia > 0) return propia
+  return contexto.baseLatency ?? 0
+}

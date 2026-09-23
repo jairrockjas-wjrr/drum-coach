@@ -2,7 +2,7 @@
 // la partitura ocupa toda la pantalla, el metrónomo va arriba en una barra
 // compacta, y el resto de opciones se abren con el botón ⋯.
 
-import { desbloquearAudio } from '../audio/contexto'
+import { desbloquearAudio, latenciaDeSalida } from '../audio/contexto'
 import { EJERCICIOS } from '../ejercicios/catalogo'
 import { ticksPorCompas, type Pieza } from '../ejercicios/tipos'
 import {
@@ -57,6 +57,8 @@ interface Preferencias {
   /** Qué versión de la batería suena. */
   kit: Kit
   entrenador: { activo: boolean; incremento: number; cadaCompases: number; bpmMeta: number }
+  /** Ajuste fino de sincronía, en milisegundos (ver latenciaDeSalida). */
+  sincronia: number
 }
 
 const POR_DEFECTO: Preferencias = {
@@ -72,6 +74,7 @@ const POR_DEFECTO: Preferencias = {
   mostrarConteo: true,
   kit: KIT_POR_DEFECTO,
   entrenador: { activo: false, incremento: 5, cadaCompases: 4, bpmMeta: 120 },
+  sincronia: 0,
 }
 
 export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
@@ -108,6 +111,17 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
    */
   let asomo = 0.2
   const cola: EventoReproduccion[] = []
+
+  /**
+   * El instante de la música que se está oyendo AHORA. Va por detrás del reloj
+   * de audio: lo que se programa todavía tiene que salir por el altavoz. Sin
+   * esto, la luz del cursor se adelanta al golpe, y con auriculares Bluetooth
+   * se adelanta mucho.
+   */
+  function relojOido(): number {
+    if (!contexto) return 0
+    return contexto.currentTime - latenciaDeSalida(contexto) - prefs.sincronia / 1000
+  }
 
   const piezasUsadas = new Set<Pieza>()
   for (const compas of ejercicio.compases) {
@@ -238,6 +252,14 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
             <input type="range" class="rango" id="vol-bateria" min="0" max="100"
                    value="${Math.round(prefs.volumenBateria * 100)}" />
           </label>
+          <label class="campo">
+            <span>Ajuste de sincronía
+              <small>si la luz se adelanta al golpe, súbelo</small></span>
+            <input type="range" class="rango" id="sincronia" min="-50" max="400" step="5"
+                   value="${prefs.sincronia}" />
+          </label>
+          <p class="nota" id="sincronia-valor"></p>
+
           <label class="campo">
             <span>Volumen del click</span>
             <input type="range" class="rango" id="vol-click" min="0" max="100"
@@ -433,7 +455,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
    */
   function deslizarConLaMusica(): void {
     if (!contexto || !reproductor) return
-    const absoluto = reproductor.posicionEnTicks(contexto.currentTime)
+    const absoluto = reproductor.posicionEnTicks(relojOido())
     if (absoluto === null) return
 
     const porVuelta = reproductor.ticksDeUnaVuelta()
@@ -452,7 +474,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
 
   function bucleVisual(): void {
     if (!contexto) return
-    const ahora = contexto.currentTime
+    const ahora = relojOido()
     while (cola.length > 0 && cola[0].cuando <= ahora) pintarEvento(cola.shift()!)
     deslizarConLaMusica()
 
@@ -660,6 +682,18 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     prefs.volumenBateria = Number((e.target as HTMLInputElement).value) / 100
     guardarPrefs()
   })
+  const sincroniaValor = $<HTMLElement>('sincronia-valor')
+  const pintarSincronia = (): void => {
+    sincroniaValor.textContent =
+      prefs.sincronia === 0 ? 'Sin ajuste' : `La luz espera ${prefs.sincronia} ms al golpe`
+  }
+  pintarSincronia()
+  $<HTMLInputElement>('sincronia').addEventListener('input', (e) => {
+    prefs.sincronia = Number((e.target as HTMLInputElement).value)
+    pintarSincronia()
+    guardarPrefs()
+  })
+
   $<HTMLInputElement>('vol-click').addEventListener('input', (e) => {
     prefs.volumenClick = Number((e.target as HTMLInputElement).value) / 100
     guardarPrefs()

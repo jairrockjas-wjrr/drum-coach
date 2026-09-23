@@ -2,7 +2,7 @@
 // Arriba lo que se ve mientras tocas (BPM, pulsos y play/stop gigante);
 // abajo, en un panel que se abre, todos los ajustes finos.
 
-import { desbloquearAudio } from '../audio/contexto'
+import { desbloquearAudio, latenciaDeSalida } from '../audio/contexto'
 import { crearMotor, type Motor } from '../metronomo/motor'
 import { fraccionesDelPulso } from '../metronomo/patron'
 import {
@@ -269,7 +269,9 @@ export function montarMetronomo(raiz: HTMLElement, volver: () => void): () => vo
   // --- Sincronía pantalla/audio: los eventos se pintan cuando el audio los toca ---
   function bucleVisual(): void {
     if (!contexto || !motor?.estaSonando()) return
-    const ahora = contexto.currentTime
+    // Se pinta cuando el golpe se OYE, no cuando se programa: lo programado
+    // todavía tiene que salir por el altavoz.
+    const ahora = contexto.currentTime - latenciaDeSalida(contexto)
     while (cola.length > 0 && cola[0].cuando <= ahora) pintarPulso(cola.shift()!)
     animacion = requestAnimationFrame(bucleVisual)
   }
