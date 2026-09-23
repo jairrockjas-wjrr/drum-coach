@@ -56,6 +56,12 @@ export interface OpcionesPartitura {
    * Es la vista de práctica: se lee como una tira, sin saltar de renglón.
    */
   unaLinea?: boolean
+  /**
+   * Cuántas veces se dibuja el ejercicio seguido. Con 2 copias el bucle no
+   * tiene que rebobinar: la tira sigue avanzando y el salto se da en un punto
+   * donde la música es idéntica, así que no se ve.
+   */
+  copias?: number
   mostrarSticking?: boolean
   mostrarConteo?: boolean
 }
@@ -168,7 +174,18 @@ export function dibujarPartitura(
 ): NotaDibujada[] {
   contenedor.innerHTML = ''
 
-  const { ancho, alto, unaLinea = false, mostrarSticking = true, mostrarConteo = true } = opciones
+  const {
+    ancho,
+    alto,
+    unaLinea = false,
+    copias = 1,
+    mostrarSticking = true,
+    mostrarConteo = true,
+  } = opciones
+
+  // Los compases se repiten tal cual; la numeración vuelve a empezar en cada
+  // copia, que es lo que se espera al leer un bucle.
+  const compasesDibujados = Array.from({ length: copias }, () => ejercicio.compases).flat()
   const porPulso = ticksPorPulso(ejercicio.compas)
   const ticksCompas = ejercicio.compas.pulsos * porPulso
 
@@ -198,7 +215,7 @@ export function dibujarPartitura(
   const dibujadas: (NotaDibujada & { vex: StaveNote | GhostNote })[] = []
   let ticksAcumulados = 0
 
-  const armados: CompasArmado[] = ejercicio.compases.map((compas, i) => {
+  const armados: CompasArmado[] = compasesDibujados.map((compas, i) => {
     const voces: Voice[] = []
     const adornos: CompasArmado['adornos'] = []
     const letreros: CompasArmado['letreros'] = []
@@ -266,7 +283,7 @@ export function dibujarPartitura(
       if (voces.length > 1) medidor.joinVoices(voces)
       minimo = medidor.preCalculateMinTotalWidth(voces)
     }
-    const conTresillos = ejercicio.compases[i].manos.some((n) => n.tresillo)
+    const conTresillos = compasesDibujados[i].manos.some((n) => n.tresillo)
     return { voces, adornos, letreros, minimo, conTresillos }
   })
 
@@ -279,7 +296,7 @@ export function dibujarPartitura(
 
   const medir = (cuantos: number) => {
     const anchoCompasBase = Math.max(anchoCompasNecesario, util / cuantos)
-    const renglones = Math.ceil(ejercicio.compases.length / cuantos)
+    const renglones = Math.ceil(compasesDibujados.length / cuantos)
     const anchoLienzo = MARGEN_IZQ * 2 + EXTRA_PRIMERO + anchoCompasBase * cuantos
     const escala = ancho / anchoLienzo
     const altoNecesario = (MARGEN_ARRIBA + renglones * ALTO_RENGLON + 16) * escala
@@ -288,7 +305,7 @@ export function dibujarPartitura(
 
   const opcionesReparto = [1, 2, 4].map(medir)
   const porRenglon = unaLinea
-    ? ejercicio.compases.length // todo seguido, en una tira
+    ? compasesDibujados.length // todo seguido, en una tira
     : alto
       ? // El primero (menos compases por renglón = notas más grandes) que quepa de alto.
         (opcionesReparto.find((o) => o.altoNecesario <= alto) ??
@@ -327,22 +344,26 @@ export function dibujarPartitura(
   // --- Segunda pasada: dibujar ---
   for (let renglon = 0; renglon < renglones; renglon++) {
     const desde = renglon * porRenglon
-    const hasta = Math.min(desde + porRenglon, ejercicio.compases.length)
+    const hasta = Math.min(desde + porRenglon, compasesDibujados.length)
     let x = MARGEN_IZQ
     const y = MARGEN_ARRIBA + desplazamiento + renglon * altoRenglon
 
     for (let i = desde; i < hasta; i++) {
-      const esPrimeroDelRenglon = i === desde
-      const anchoCompas = anchoCompasBase + (esPrimeroDelRenglon ? EXTRA_PRIMERO : 0)
+      // En la tira, cada copia del ejercicio empieza con clave y compás: así
+      // todas miden exactamente lo mismo y el salto de una vuelta a otra cae
+      // sobre el mismo dibujo, sin que se note.
+      const esInicioDeCopia = i % ejercicio.compases.length === 0
+      const conClave = unaLinea ? esInicioDeCopia : i === desde
+      const anchoCompas = anchoCompasBase + (conClave ? EXTRA_PRIMERO : 0)
       const stave = new Stave(x, y, anchoCompas)
 
-      if (esPrimeroDelRenglon) {
+      if (conClave) {
         stave.addClef('percussion')
-        if (renglon === 0) {
+        if (unaLinea || renglon === 0) {
           stave.addTimeSignature(`${ejercicio.compas.pulsos}/${ejercicio.compas.figura}`)
         }
       }
-      stave.setMeasure(i + 1)
+      stave.setMeasure((i % ejercicio.compases.length) + 1)
       stave.setContext(ctx).draw()
 
       const { voces, adornos, letreros, conTresillos } = armados[i]
@@ -353,7 +374,7 @@ export function dibujarPartitura(
 
       const formateador = new Formatter()
       if (voces.length > 1) formateador.joinVoices(voces)
-      formateador.format(voces, anchoCompas - (esPrimeroDelRenglon ? EXTRA_PRIMERO + 18 : 18))
+      formateador.format(voces, anchoCompas - (conClave ? EXTRA_PRIMERO + 18 : 18))
       for (const voz of voces) voz.draw(ctx, stave)
       for (const adorno of adornos) adorno.setContext(ctx).draw()
 
@@ -419,54 +440,76 @@ export function dibujarPartitura(
 /**
  * Dibuja la leyenda: un mini pentagrama por pieza, mostrando cómo se escribe
  * de verdad, en vez de explicarlo con palabras.
+ *
+ * Los dibujos llevan medida en píxeles, no en porcentaje: Safari no calcula
+ * bien el alto automático de un SVG con viewBox y se salían de su recuadro.
+ * Se usan redondas (sin plica) para que se vea solo la cabeza de la nota, que
+ * es lo que distingue una pieza de otra.
  */
-export function dibujarLeyenda(contenedor: HTMLDivElement, piezas: Pieza[], nombres: Record<Pieza, string>): void {
+export function dibujarLeyenda(
+  contenedor: HTMLDivElement,
+  piezas: Pieza[],
+  nombres: Record<Pieza, string>,
+  alTocar?: (pieza: Pieza) => void,
+): void {
   contenedor.innerHTML = ''
 
+  // VexFlow deja 40 px suyos sobre el pentagrama: la línea de arriba cae a 40
+  // del inicio y la de abajo a 80. Arriba puede haber un crash (20 px más) y
+  // abajo el hi-hat de pie (otros 20), así que el recuadro necesita 116.
+  const ANCHO = 108
+  const ALTO = 116
+  const CHICO = 92 // píxeles del dibujo en la rejilla
+  const GRANDE = 190 // al tocarlo
+
   for (const pieza of piezas) {
-    const fila = document.createElement('div')
+    const fila = document.createElement('button')
     fila.className = 'leyenda__fila'
+    fila.type = 'button'
 
     const dibujo = document.createElement('div')
     dibujo.className = 'leyenda__dibujo'
     fila.append(dibujo)
 
     const texto = document.createElement('span')
+    texto.className = 'leyenda__nombre'
     texto.textContent = nombres[pieza]
     fila.append(texto)
     contenedor.append(fila)
 
-    const ANCHO = 92
-    const ALTO = 96
     const renderizador = new Renderer(dibujo, Renderer.Backends.SVG)
     renderizador.resize(ANCHO, ALTO)
     const ctx = renderizador.getContext()
 
-    const stave = new Stave(2, 18, ANCHO - 6)
+    const stave = new Stave(4, 2, ANCHO - 10)
     stave.setContext(ctx).draw()
 
-    const esDePie = pieza === 'bombo' || pieza === 'hiHatPedal'
-    const nota = new StaveNote({
-      keys: [SITIO[pieza].clave],
-      duration: 'q',
-      stemDirection: esDePie ? Stem.DOWN : Stem.UP,
-    })
+    const nota = new StaveNote({ keys: [SITIO[pieza].clave], duration: 'w' })
     if (pieza === 'tarolaAro') nota.addModifier(new Articulation('a>').setPosition(3), 0)
     if (pieza === 'hiHatAbierto') {
       nota.addModifier(new Annotation('o').setVerticalJustification(Annotation.VerticalJustify.TOP), 0)
     }
 
-    const voz = new Voice({ numBeats: 1, beatValue: 4 })
+    const voz = new Voice({ numBeats: 4, beatValue: 4 })
     voz.setMode(Voice.Mode.SOFT)
     voz.addTickables([nota])
-    new Formatter().format([voz], ANCHO - 44)
+    new Formatter().format([voz], ANCHO - 58)
     voz.draw(ctx, stave)
 
     const svg = dibujo.querySelector('svg')
     if (svg) {
       svg.setAttribute('viewBox', `0 0 ${ANCHO} ${ALTO}`)
-      svg.setAttribute('width', '100%')
-      svg.removeAttribute('height')
+      const medir = (anchoPx: number): void => {
+        svg.setAttribute('width', String(anchoPx))
+        svg.setAttribute('height', String(Math.round((anchoPx * ALTO) / ANCHO)))
+      }
+      medir(CHICO)
+
+      fila.addEventListener('click', () => {
+        const grande = fila.classList.toggle('leyenda__fila--grande')
+        medir(grande ? GRANDE : CHICO)
+        alTocar?.(pieza)
+      })
     }
   }
 }

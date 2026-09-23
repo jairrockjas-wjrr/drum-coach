@@ -19,6 +19,7 @@ import {
   NOMBRE_PIEZA,
   cargarBateria,
   haySonidosReales,
+  programarPieza,
   type Kit,
 } from '../audio/bateria'
 import { BPM_MAXIMO, BPM_MINIMO } from '../metronomo/tipos'
@@ -31,6 +32,8 @@ const CLAVE_GUARDADO = 'reproductor'
 const ICONOS = {
   volver: '<path d="M14.5 5 8 12l6.5 7"/>',
   tocar: '<path d="M8.5 5.5 18 12l-9.5 6.5z" fill="currentColor" stroke="none"/>',
+  pausa:
+    '<rect x="8" y="6.5" width="3" height="11" rx="1" fill="currentColor" stroke="none"/><rect x="13" y="6.5" width="3" height="11" rx="1" fill="currentColor" stroke="none"/>',
   parar: '<rect x="7.5" y="7.5" width="9" height="9" rx="1.5" fill="currentColor" stroke="none"/>',
   bucle: '<path d="M5 10a6 6 0 0 1 10-4.5"/><path d="M19 14a6 6 0 0 1-10 4.5"/><path d="M15 2.5v3.5h-3.5"/><path d="M9 21.5V18h3.5"/>',
   ajustes: '<circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
@@ -107,8 +110,6 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
         ${icono('volver')}
       </a>
 
-      <button class="tocar" id="tocar" aria-label="Reproducir">${icono('tocar')}</button>
-
       <div class="tempo">
         <button class="tempo__paso" data-paso="-5">−5</button>
         <button class="tempo__paso" data-paso="-1">−1</button>
@@ -117,18 +118,23 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
         <button class="tempo__paso" data-paso="5">+5</button>
       </div>
 
-      <button class="icono" id="loop" aria-label="Repetir en bucle" aria-pressed="${prefs.loop}">
-        ${icono('bucle')}
-      </button>
       <button class="icono" id="abrir-ajustes" aria-label="Ajustes">${icono('ajustes')}</button>
     </header>
+
+    <p class="estado-ejercicio" id="estado">${ejercicio.descripcion}</p>
 
     <main class="lienzo">
       <div class="hoja" id="hoja"></div>
     </main>
 
     <footer class="pie-ejercicio">
-      <p class="estado-ejercicio" id="estado">${ejercicio.descripcion}</p>
+      <button class="icono icono--texto" id="loop" aria-pressed="${prefs.loop}">
+        ${icono('bucle')}<span>Loop</span>
+      </button>
+      <button class="tocar" id="tocar" aria-label="Reproducir">${icono('tocar')}</button>
+      <button class="icono icono--texto" id="parar" aria-label="Detener" disabled>
+        ${icono('parar')}<span>Stop</span>
+      </button>
     </footer>
 
     <dialog class="panel" id="ajustes">
@@ -209,6 +215,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   const hoja = $<HTMLDivElement>('hoja')
   const lienzo = raiz.querySelector<HTMLElement>('.lienzo')!
   const botonTocar = $<HTMLButtonElement>('tocar')
+  const botonParar = $<HTMLButtonElement>('parar')
   const botonLoop = $<HTMLButtonElement>('loop')
   const bpmNumero = $<HTMLElement>('bpm-numero')
   const bpmRango = $<HTMLInputElement>('bpm-rango')
@@ -232,13 +239,22 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       ancho,
       alto,
       unaLinea: true,
+      // Tres copias del ejercicio, una detrás de otra. La música se sigue
+      // siempre en la del medio: así hay tira por delante y por detrás, el
+      // deslizamiento nunca se topa con el borde y, al empezar otra vuelta,
+      // el salto cae sobre música idéntica y no se ve.
+      copias: 3,
       mostrarSticking: prefs.mostrarSticking,
       mostrarConteo: prefs.mostrarConteo,
     })
     porClave = new Map()
     for (const nota of notas) porClave.set(`${nota.compas}-${nota.voz}-${nota.indice}`, nota)
     medirPosiciones()
-    lienzo.scrollLeft = 0
+    // Se arranca mirando la copia del medio, que es la que se sigue al tocar.
+    const inicioMedio = notas.find((n) => n.compas === ejercicio!.compases.length)
+    lienzo.scrollLeft = inicioMedio
+      ? Math.max(0, (xDeTicks(inicioMedio.ticks) ?? 0) - lienzo.clientWidth / 3)
+      : 0
   }
 
   async function pintarLeyenda(): Promise<void> {
@@ -247,7 +263,19 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       $<HTMLDivElement>('leyenda'),
       ORDEN_LEYENDA.filter((p) => piezasUsadas.has(p)),
       NOMBRE_PIEZA,
+      // Al tocar una pieza de la leyenda, además de agrandarse, suena.
+      (pieza) => void sonarPieza(pieza),
     )
+  }
+
+  /** Hace sonar una pieza suelta, para oírla desde la leyenda. */
+  async function sonarPieza(pieza: Pieza): Promise<void> {
+    contexto = await desbloquearAudio()
+    if (!haySonidosReales(prefs.kit)) await cargarBateria(contexto, prefs.kit)
+    programarPieza(contexto, pieza, {
+      cuando: contexto.currentTime + 0.02,
+      volumen: prefs.volumenBateria,
+    })
   }
 
   function apagarCursor(): void {
@@ -266,7 +294,9 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       return
     }
 
-    const nota = porClave.get(`${evento.compas}-${evento.voz}-${evento.indice}`)
+    // Siempre se sigue la copia del medio (ver el dibujo con copias: 3).
+    const compasDibujado = evento.compas + ejercicio!.compases.length
+    const nota = porClave.get(`${compasDibujado}-${evento.voz}-${evento.indice}`)
     if (!nota?.elemento) return
 
     hoja
@@ -285,12 +315,14 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
    * y sirve para calcular en cada fotograma por dónde va la música.
    */
   function medirPosiciones(): void {
-    const origenHoja = hoja.getBoundingClientRect().left - hoja.scrollLeft
+    // Medido respecto a la hoja, no a la pantalla: así no depende de por dónde
+    // esté deslizada la tira en ese momento.
+    const origenHoja = hoja.getBoundingClientRect().left
     const puntos = new Map<number, number>()
     for (const nota of notas) {
       if (!nota.elemento || puntos.has(nota.ticks)) continue
       const caja = nota.elemento.getBoundingClientRect()
-      puntos.set(nota.ticks, caja.left + caja.width / 2 - origenHoja + lienzo.scrollLeft)
+      puntos.set(nota.ticks, caja.left + caja.width / 2 - origenHoja)
     }
     posiciones = [...puntos.entries()]
       .map(([ticks, x]) => ({ ticks, x }))
@@ -318,18 +350,20 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
    */
   function deslizarConLaMusica(): void {
     if (!contexto || !reproductor) return
-    const ticks = reproductor.posicionEnTicks(contexto.currentTime)
-    if (ticks === null) return
-    const x = xDeTicks(ticks)
+    const absoluto = reproductor.posicionEnTicks(contexto.currentTime)
+    if (absoluto === null) return
+
+    // Siempre dentro de la copia del medio.
+    const porVuelta = reproductor.ticksDeUnaVuelta()
+    const dentro = absoluto % porVuelta
+    const x = xDeTicks(dentro + porVuelta)
     if (x === null) return
-    // El punto que suena se mantiene en el primer tercio de la pantalla, para
-    // ver lo que viene.
-    const objetivo = Math.max(0, x - lienzo.clientWidth / 3)
-    // Al volver al principio del bucle el salto es grande: ahí se va de golpe.
-    lienzo.scrollLeft =
-      Math.abs(objetivo - lienzo.scrollLeft) > lienzo.clientWidth
-        ? objetivo
-        : lienzo.scrollLeft + (objetivo - lienzo.scrollLeft) * 0.35
+
+    // El punto que suena se queda en el primer tercio de la pantalla, para ver
+    // lo que viene. Se coloca sin suavizado: la posición ya viene del reloj de
+    // audio, así que el movimiento es continuo, y al cambiar de copia el salto
+    // cae sobre música idéntica y no se nota.
+    lienzo.scrollLeft = Math.max(0, x - lienzo.clientWidth / 3)
   }
 
   function bucleVisual(): void {
@@ -358,21 +392,41 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     reproductor?.actualizar(opcionesActuales())
   }
 
+  /** Pone el botón grande en play o en pausa según lo que toque. */
+  function pintarTransporte(): void {
+    const sonando = reproductor?.estaSonando() ?? false
+    botonTocar.innerHTML = icono(sonando ? 'pausa' : 'tocar')
+    botonTocar.setAttribute('aria-label', sonando ? 'Pausa' : 'Reproducir')
+    botonTocar.classList.toggle('tocar--pausa', sonando)
+    botonParar.disabled = !sonando && !(reproductor?.estaEnPausa() ?? false)
+  }
+
+  /** Para del todo y vuelve al principio. */
   function detener(): void {
     reproductor?.detener()
     cancelAnimationFrame(animacion)
     cola.length = 0
     apagarCursor()
-    botonTocar.innerHTML = icono('tocar')
-    botonTocar.setAttribute('aria-label', 'Reproducir')
-    botonTocar.classList.remove('tocar--parar')
     estado.textContent = ejercicio!.descripcion
+    void pintarPartitura()
+    pintarTransporte()
     void soltarPantalla()
   }
 
+  /** Botón grande: reproduce, pausa y sigue desde donde se quedó. */
   async function alternar(): Promise<void> {
     if (reproductor?.estaSonando()) {
-      detener()
+      reproductor.pausar()
+      cancelAnimationFrame(animacion)
+      cola.length = 0
+      estado.textContent = 'En pausa'
+      pintarTransporte()
+      return
+    }
+    if (reproductor?.estaEnPausa()) {
+      reproductor.reanudar()
+      animacion = requestAnimationFrame(bucleVisual)
+      pintarTransporte()
       return
     }
     contexto = await desbloquearAudio()
@@ -387,9 +441,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     reproductor = crearReproductor(contexto, ejercicio!, opcionesActuales())
     reproductor.alEvento((evento) => cola.push(evento))
     reproductor.iniciar()
-    botonTocar.innerHTML = icono('parar')
-    botonTocar.setAttribute('aria-label', 'Detener')
-    botonTocar.classList.add('tocar--parar')
+    pintarTransporte()
     animacion = requestAnimationFrame(bucleVisual)
     const ok = await mantenerPantallaEncendida()
     sessionStorage.setItem('drum-coach:pantalla-encendida', ok ? 'si' : 'no')
@@ -406,6 +458,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
 
   // --- Conexiones ---
   botonTocar.addEventListener('click', () => void alternar())
+  botonParar.addEventListener('click', detener)
 
   botonLoop.addEventListener('click', () => {
     prefs.loop = !prefs.loop
@@ -414,6 +467,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     guardarPrefs()
   })
   botonLoop.classList.toggle('icono--activo', prefs.loop)
+  pintarTransporte()
 
   $<HTMLButtonElement>('abrir-ajustes').addEventListener('click', () => {
     panel.showModal()

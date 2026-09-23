@@ -61,14 +61,21 @@ export interface EventoReproduccion {
 export interface Reproductor {
   iniciar(): void
   detener(): void
+  /** Para el sonido pero se queda donde está, para seguir después. */
+  pausar(): void
+  /** Sigue desde donde se pausó. */
+  reanudar(): void
+  estaEnPausa(): boolean
   estaSonando(): boolean
   /**
-   * En qué punto del ejercicio está la música en ese instante, medido en
-   * ticks desde el inicio de la vuelta. Sirve para mover la partitura de
-   * forma continua, pegada al sonido. Devuelve null si aún no ha empezado
-   * (cuenta de entrada) o está parado.
+   * En qué punto del ejercicio está la música en ese instante, medido en ticks
+   * desde el primer golpe y SIN volver a cero en cada vuelta (la vuelta 2
+   * empieza donde acabó la 1). Sirve para mover la partitura de forma continua.
+   * Devuelve null si aún no ha empezado (cuenta de entrada) o está parado.
    */
   posicionEnTicks(tiempo: number): number | null
+  /** Cuántos ticks dura una vuelta completa. */
+  ticksDeUnaVuelta(): number
   cambiarBpm(bpm: number): void
   actualizar(opciones: OpcionesReproductor): void
   alEvento(escucha: (evento: EventoReproduccion) => void): void
@@ -126,6 +133,8 @@ export function crearReproductor(
   const ticksPasada = ejercicio.compases.length * porCompas
 
   let sonando = false
+  /** Posición (en ticks absolutos) donde se pausó, o null si no hay pausa. */
+  let pausadoEn: number | null = null
   let temporizador: number | null = null
   let escucha: ((evento: EventoReproduccion) => void) | null = null
 
@@ -278,6 +287,7 @@ export function crearReproductor(
 
     detener(): void {
       sonando = false
+      pausadoEn = null
       if (temporizador !== null) {
         clearInterval(temporizador)
         temporizador = null
@@ -285,15 +295,50 @@ export function crearReproductor(
       cancelarFuturos(contexto.currentTime)
     },
 
+    pausar(): void {
+      if (!sonando) return
+      const pulsos = (contexto.currentTime - origen) / duracionPulso()
+      pausadoEn = Math.max(0, pulsos * porPulso)
+      sonando = false
+      if (temporizador !== null) {
+        clearInterval(temporizador)
+        temporizador = null
+      }
+      cancelarFuturos(contexto.currentTime)
+    },
+
+    reanudar(): void {
+      if (sonando || pausadoEn === null) return
+      const ticks = pausadoEn
+      pausadoEn = null
+      sonando = true
+
+      // Se recoloca el origen para que el punto donde se pausó caiga ahora.
+      origen = contexto.currentTime + 0.12 - (ticks / porPulso) * duracionPulso()
+      indiceCuenta = cuenta.length // la cuenta de entrada ya pasó
+      vuelta = Math.floor(ticks / ticksPasada)
+      const dentro = ticks % ticksPasada
+      indice = eventos.findIndex((e) => e.ticks > dentro)
+      if (indice === -1) {
+        indice = 0
+        vuelta++
+      }
+      revisar()
+      temporizador = window.setInterval(revisar, REVISION_MS)
+    },
+
+    estaEnPausa: () => pausadoEn !== null,
+
     estaSonando: () => sonando,
 
     posicionEnTicks(tiempo: number): number | null {
       if (!sonando) return null
       const pulsos = (tiempo - origen) / duracionPulso()
       const ticks = pulsos * porPulso
-      if (ticks < 0) return null
-      return ticks % ticksPasada
+      return ticks < 0 ? null : ticks
     },
+
+    ticksDeUnaVuelta: () => ticksPasada,
 
     cambiarBpm(nuevo: number): void {
       const anterior = opciones.bpm
