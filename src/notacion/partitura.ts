@@ -154,6 +154,8 @@ export function dibujarPartitura(
     adornos: { setContext: (c: RenderContext) => { draw: () => void } }[]
     letreros: { x: () => number; conteo: string; mano: string }[]
     minimo: number
+    /** Lleva tresillos: su corchete ocupa el hueco de debajo del pentagrama. */
+    conTresillos: boolean
   }
 
   const dibujadas: (NotaDibujada & { vex: StaveNote })[] = []
@@ -208,7 +210,8 @@ export function dibujarPartitura(
       if (voces.length > 1) medidor.joinVoices(voces)
       minimo = medidor.preCalculateMinTotalWidth(voces)
     }
-    return { voces, adornos, letreros, minimo }
+    const conTresillos = ejercicio.compases[i].manos.some((n) => n.tresillo)
+    return { voces, adornos, letreros, minimo, conTresillos }
   })
 
   // --- Reparto: cuántos compases por renglón ---
@@ -275,7 +278,7 @@ export function dibujarPartitura(
       stave.setMeasure(i + 1)
       stave.setContext(ctx).draw()
 
-      const { voces, adornos, letreros } = armados[i]
+      const { voces, adornos, letreros, conTresillos } = armados[i]
       if (voces.length === 0) {
         x += anchoCompas
         continue
@@ -288,7 +291,7 @@ export function dibujarPartitura(
       for (const adorno of adornos) adorno.setContext(ctx).draw()
 
       // Filas de texto: primero el sticking, debajo el conteo.
-      const yBase = stave.getYForLine(4)
+      const yBase = stave.getYForLine(4) + (conTresillos ? 26 : 0)
       ctx.save()
       for (const letrero of letreros) {
         const posX = letrero.x()
