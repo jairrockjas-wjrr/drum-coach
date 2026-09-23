@@ -6,13 +6,18 @@
   "description": "App de práctica de batería (PWA) — jazz, doble pedal, lectura y remates.",
   "scripts": {
     "dev": "vite --host",
-    "build": "tsc --noEmit && node pruebas/logica.mjs && vite build",
+    "build": "tsc --noEmit && npm run pruebas && vite build",
     "preview": "vite preview --host",
     "iconos": "node herramientas/generar-iconos.mjs",
-    "prueba:logica": "node pruebas/logica.mjs"
+    "prueba:logica": "node --import ./pruebas/resolver.mjs pruebas/logica.mjs",
+    "prueba:ejercicios": "node --import ./pruebas/resolver.mjs pruebas/ejercicios.mjs",
+    "pruebas": "npm run prueba:logica && npm run prueba:ejercicios"
   },
   "devDependencies": {
     "typescript": "^7.0.2",
     "vite": "^8.3.0"
+  },
+  "dependencies": {
+    "vexflow": "^5.0.0"
   }
 }

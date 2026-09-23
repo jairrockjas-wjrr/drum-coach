@@ -11,6 +11,9 @@
 
 let contexto: AudioContext | null = null
 let salidaPrincipal: GainNode | null = null
+// Dos buses separados para poder subir el click sin subir la batería y al revés.
+let salidaClick: GainNode | null = null
+let salidaBateria: GainNode | null = null
 
 /** Indica si el navegador admite declarar la sesión de audio como 'playback'. */
 export const admiteSesionDeAudio = (): boolean =>
@@ -31,6 +34,15 @@ export async function desbloquearAudio(): Promise<AudioContext> {
     salidaPrincipal = contexto.createGain()
     salidaPrincipal.gain.value = 1
     salidaPrincipal.connect(contexto.destination)
+
+    salidaClick = contexto.createGain()
+    salidaClick.gain.value = 1
+    salidaClick.connect(salidaPrincipal)
+
+    salidaBateria = contexto.createGain()
+    // Un poco por debajo de 1 para que dos piezas juntas (bombo + crash) no saturen.
+    salidaBateria.gain.value = 0.8
+    salidaBateria.connect(salidaPrincipal)
   }
 
   // Declarar la sesión como reproducción (ignora el interruptor de silencio en iOS).
@@ -44,10 +56,22 @@ export async function desbloquearAudio(): Promise<AudioContext> {
 /** Devuelve el contexto ya desbloqueado, o null si todavía no hubo un toque. */
 export const obtenerContexto = (): AudioContext | null => contexto
 
-/** Nodo al que se conecta todo lo que suena (permite un volumen general). */
+/** Nodo al que se conecta todo lo que suena (volumen general). */
 export function obtenerSalida(): GainNode {
   if (!salidaPrincipal) throw new Error('El audio aún no se ha desbloqueado.')
   return salidaPrincipal
+}
+
+/** Bus del metrónomo. */
+export function obtenerSalidaClick(): GainNode {
+  if (!salidaClick) throw new Error('El audio aún no se ha desbloqueado.')
+  return salidaClick
+}
+
+/** Bus de la batería. */
+export function obtenerSalidaBateria(): GainNode {
+  if (!salidaBateria) throw new Error('El audio aún no se ha desbloqueado.')
+  return salidaBateria
 }
 
 /** Estado actual, para mostrarlo en pantalla. */

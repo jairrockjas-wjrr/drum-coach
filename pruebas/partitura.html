@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Prueba de partituras</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { background:#11141a; color:#f2f4f8; font-family:-apple-system,system-ui,sans-serif; padding:16px; }
+      h2 { font-size:16px; margin:24px 0 4px; }
+      p { margin:0 0 8px; color:#98a1b3; font-size:13px; }
+      .hoja { background:#fff; border-radius:12px; padding:4px; }
+    </style>
+  </head>
+  <body>
+    <h1>Partituras del catálogo</h1>
+    <div id="todo"></div>
+    <script type="module">
+      import { EJERCICIOS } from '/src/ejercicios/catalogo.ts'
+      import { dibujarPartitura } from '/src/notacion/partitura.ts'
+
+      const ancho = Math.min(document.body.clientWidth - 32, 760)
+      const todo = document.getElementById('todo')
+      const errores = []
+      for (const ejercicio of EJERCICIOS) {
+        const titulo = document.createElement('h2')
+        titulo.textContent = `${ejercicio.titulo} — ${ejercicio.compas.pulsos}/${ejercicio.compas.figura}`
+        const desc = document.createElement('p')
+        desc.textContent = ejercicio.descripcion
+        const hoja = document.createElement('div')
+        hoja.className = 'hoja'
+        todo.append(titulo, desc, hoja)
+        try {
+          dibujarPartitura(hoja, ejercicio, { ancho })
+        } catch (e) {
+          errores.push(`${ejercicio.id}: ${e.message}`)
+          hoja.textContent = 'ERROR: ' + e.message
+        }
+      }
+      window.__errores = errores
+    </script>
+  </body>
+</html>

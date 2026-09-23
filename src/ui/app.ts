@@ -3,6 +3,8 @@
 
 import { montarPantallaInicio } from './pantalla-inicio'
 import { montarMetronomo } from './pantalla-metronomo'
+import { montarListaEjercicios } from './pantalla-ejercicios'
+import { montarEjercicio } from './pantalla-ejercicio'
 
 export function iniciarApp(raiz: HTMLElement): void {
   // Cada pantalla puede devolver una función para soltar lo que dejó abierto
@@ -18,6 +20,10 @@ export function iniciarApp(raiz: HTMLElement): void {
       limpiar = montarMetronomo(raiz, () => {
         location.hash = ''
       })
+    } else if (ruta === '/ejercicios') {
+      montarListaEjercicios(raiz)
+    } else if (ruta.startsWith('/ejercicio/')) {
+      limpiar = montarEjercicio(raiz, ruta.slice('/ejercicio/'.length))
     } else {
       montarPantallaInicio(raiz)
     }

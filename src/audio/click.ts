@@ -5,7 +5,7 @@
 // que es el único reloj preciso del navegador. El motor del metrónomo
 // (src/metronomo/motor.ts) usa esta función con un scheduler de lookahead.
 
-import { obtenerSalida } from './contexto'
+import { obtenerSalidaClick } from './contexto'
 import type { TipoClick } from '../metronomo/tipos'
 
 /** Sonido de cada tipo de click: agudo y fuerte el acento, suave la subdivisión. */
@@ -46,7 +46,7 @@ export function programarClick(
   envolvente.gain.exponentialRampToValueAtTime(0.0001, cuando + sonido.duracion)
 
   oscilador.connect(envolvente)
-  envolvente.connect(obtenerSalida())
+  envolvente.connect(obtenerSalidaClick())
 
   oscilador.start(cuando)
   oscilador.stop(cuando + sonido.duracion + 0.01)

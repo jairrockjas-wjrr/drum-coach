@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Prueba de la batería sintetizada</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { background:#0d0f13; color:#f2f4f8; font-family:-apple-system,system-ui,sans-serif; padding:24px; }
+      button { font-size:16px; padding:12px 16px; margin:4px; border-radius:12px; border:1px solid #2c3240; background:#212632; color:#f2f4f8; }
+      #medir { background:#f2a33c; color:#241503; font-weight:700; }
+      table { border-collapse:collapse; margin-top:20px; font-variant-numeric:tabular-nums; }
+      td, th { padding:5px 16px 5px 0; text-align:left; }
+      td:first-child { color:#98a1b3; }
+      .mal { color:#ef6b6b; font-weight:700; }
+    </style>
+  </head>
+  <body>
+    <h1>Batería sintetizada</h1>
+    <p>Toca cada pieza para oírla, o mide todas de golpe.</p>
+    <div id="botones"></div>
+    <p><button id="medir">Medir todas</button></p>
+    <table id="tabla"></table>
+
+    <script type="module">
+      import { desbloquearAudio, obtenerSalidaBateria } from '/src/audio/contexto.ts'
+      import { programarPieza, NOMBRE_PIEZA } from '/src/audio/bateria.ts'
+
+      const piezas = Object.keys(NOMBRE_PIEZA)
+      const botones = document.getElementById('botones')
+      for (const pieza of piezas) {
+        const b = document.createElement('button')
+        b.textContent = NOMBRE_PIEZA[pieza]
+        b.onclick = async () => {
+          const ctx = await desbloquearAudio()
+          programarPieza(ctx, pieza, { cuando: ctx.currentTime + 0.05 })
+        }
+        botones.append(b)
+      }
+
+      document.getElementById('medir').onclick = async () => {
+        const ctx = await desbloquearAudio()
+        const analizador = ctx.createAnalyser()
+        analizador.fftSize = 2048
+        obtenerSalidaBateria().connect(analizador)
+        const datos = new Float32Array(analizador.fftSize)
+        const filas = []
+
+        for (const pieza of piezas) {
+          programarPieza(ctx, pieza, { cuando: ctx.currentTime + 0.03 })
+          let pico = 0
+          let ultimoSonido = 0
+          const inicio = performance.now()
+          while (performance.now() - inicio < 1800) {
+            analizador.getFloatTimeDomainData(datos)
+            let max = 0
+            for (const v of datos) max = Math.max(max, Math.abs(v))
+            pico = Math.max(pico, max)
+            if (max > 0.01) ultimoSonido = performance.now() - inicio
+            await new Promise((r) => setTimeout(r, 16))
+          }
+          filas.push({ pieza: NOMBRE_PIEZA[pieza], pico, duracion: Math.round(ultimoSonido) })
+        }
+
+        document.getElementById('tabla').innerHTML =
+          '<tr><th>Pieza</th><th>Nivel máximo</th><th>Dura</th></tr>' +
+          filas
+            .map(
+              (f) =>
+                `<tr><td>${f.pieza}</td><td class="${f.pico < 0.02 ? 'mal' : ''}">${f.pico.toFixed(
+                  3,
+                )}</td><td>${f.duracion} ms</td></tr>`,
+            )
+            .join('')
+        window.__medicion = filas
+      }
+    </script>
+  </body>
+</html>

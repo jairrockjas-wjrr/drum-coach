@@ -92,6 +92,7 @@ button {
 /* --- Botones --- */
 .boton {
   width: 100%;
+  color: var(--texto);
   min-height: var(--toque-min);
   border: 1px solid var(--borde);
   border-radius: var(--radio);
@@ -480,4 +481,75 @@ button {
 
 [hidden] {
   display: none !important;
+}
+
+/* =========================================================
+   Ejercicios y partitura
+   ========================================================= */
+
+/* La partitura siempre va sobre fondo claro: negro sobre blanco se lee mejor
+   con el teléfono en un atril y con poca luz de sala. */
+.hoja {
+  background: #fbfbfa;
+  border-radius: 12px;
+  padding: 6px 2px;
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.hoja svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* Nota que está sonando ahora mismo. */
+.hoja .sonando path,
+.hoja .sonando rect,
+.hoja .sonando text {
+  fill: var(--acento-oscuro);
+  stroke: var(--acento-oscuro);
+}
+
+.estado-ejercicio {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--texto-suave);
+  min-height: 20px;
+}
+
+.modulo .nivel {
+  color: var(--acento);
+  letter-spacing: 1px;
+}
+
+/* Botón que se queda "encendido" (loop). */
+.boton--activo {
+  border-color: var(--acento);
+  color: var(--acento);
+}
+
+a.boton {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+a.modulo {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+a.barra__volver {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.cargando {
+  margin: 0;
+  padding: 28px 12px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
 }
