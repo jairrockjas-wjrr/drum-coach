@@ -8,6 +8,7 @@
 
 import { programarClick } from '../audio/click'
 import { programarPieza } from '../audio/bateria'
+import { BPM_MAXIMO } from '../metronomo/tipos'
 import type { Ejercicio, Pieza } from './tipos'
 import { esSilencio, ticksDeNota, ticksPorCompas, ticksPorPulso } from './tipos'
 
@@ -26,6 +27,16 @@ export interface OpcionesReproductor {
   volumenBateria: number
   volumenClick: number
   cuentaEntrada: 0 | 1 | 2
+  /** Entrenador de velocidad: sube el tempo solo cada tantos compases. */
+  entrenador: {
+    activo: boolean
+    /** Cuántos BPM sube cada vez. */
+    incremento: number
+    /** Cada cuántos compases sube. */
+    cadaCompases: number
+    /** BPM al que deja de subir. */
+    bpmMeta: number
+  }
 }
 
 type TipoEvento = 'nota' | 'click'
@@ -79,6 +90,8 @@ export interface Reproductor {
   cambiarBpm(bpm: number): void
   actualizar(opciones: OpcionesReproductor): void
   alEvento(escucha: (evento: EventoReproduccion) => void): void
+  /** Avisa cuando el entrenador sube el tempo por su cuenta. */
+  alCambiarBpm(escucha: (bpm: number) => void): void
 }
 
 /** Convierte el ejercicio en una lista de eventos ordenados por tiempo. */
@@ -137,6 +150,10 @@ export function crearReproductor(
   let pausadoEn: number | null = null
   let temporizador: number | null = null
   let escucha: ((evento: EventoReproduccion) => void) | null = null
+  let escuchaBpm: ((bpm: number) => void) | null = null
+  /** Compases tocados desde la última subida del entrenador. */
+  let compasesDesdeSubida = 0
+  let ultimoCompasVisto = -1
 
   /** Instante del reloj de audio que corresponde a la posición 0. */
   let origen = 0
@@ -225,6 +242,27 @@ export function crearReproductor(
     })
   }
 
+  /**
+   * Entrenador de velocidad: cada tantos compases sube el tempo hasta la meta.
+   * El cambio se ancla en el instante exacto en que empieza ese compás, así
+   * que no se pierde el sitio ni se desfasa lo que ya estaba programado.
+   */
+  const subirSiToca = (posicion: number, cuando: number): void => {
+    const ent = opciones.entrenador
+    if (!ent.activo) return
+    compasesDesdeSubida++
+    if (compasesDesdeSubida < Math.max(1, ent.cadaCompases)) return
+    compasesDesdeSubida = 0
+
+    const meta = Math.min(BPM_MAXIMO, ent.bpmMeta)
+    const siguiente = Math.min(meta, opciones.bpm + ent.incremento)
+    if (siguiente === opciones.bpm) return
+
+    origen = cuando - (posicion / porPulso) * (60 / siguiente)
+    opciones = { ...opciones, bpm: siguiente }
+    escuchaBpm?.(siguiente)
+  }
+
   const revisar = (): void => {
     const limite = contexto.currentTime + VENTANA_S
     if (programados.length > 64) {
@@ -247,6 +285,17 @@ export function crearReproductor(
       const evento = eventos[indice]
       const cuando = tiempoDe(vuelta * ticksPasada + evento.ticks)
       if (cuando >= limite) return
+
+      // Al empezar un compás nuevo, el entrenador decide si toca subir.
+      if (evento.tipo === 'click' && evento.pulso === 0) {
+        const compasGlobal = vuelta * ejercicio.compases.length + evento.compas
+        if (compasGlobal !== ultimoCompasVisto) {
+          ultimoCompasVisto = compasGlobal
+          if (compasGlobal > 0) {
+            subirSiToca(vuelta * ticksPasada + evento.ticks, cuando)
+          }
+        }
+      }
 
       // En "escuchar y tocar", las vueltas impares van sin batería.
       const soloClick = opciones.escucharYTocar && vuelta % 2 === 1
@@ -277,6 +326,8 @@ export function crearReproductor(
       indice = 0
       vuelta = 0
       indiceCuenta = 0
+      compasesDesdeSubida = 0
+      ultimoCompasVisto = -1
       cuenta = clicksDeCuenta()
       ticksCuenta = opciones.cuentaEntrada * porCompas
       // La posición 0 es el primer golpe del ejercicio; la cuenta va antes.
@@ -374,6 +425,10 @@ export function crearReproductor(
 
     alEvento(nueva): void {
       escucha = nueva
+    },
+
+    alCambiarBpm(nueva): void {
+      escuchaBpm = nueva
     },
   }
 }

@@ -56,6 +56,7 @@ interface Preferencias {
   mostrarConteo: boolean
   /** Qué versión de la batería suena. */
   kit: Kit
+  entrenador: { activo: boolean; incremento: number; cadaCompases: number; bpmMeta: number }
 }
 
 const POR_DEFECTO: Preferencias = {
@@ -70,6 +71,7 @@ const POR_DEFECTO: Preferencias = {
   mostrarSticking: true,
   mostrarConteo: true,
   kit: KIT_POR_DEFECTO,
+  entrenador: { activo: false, incremento: 5, cadaCompases: 4, bpmMeta: 120 },
 }
 
 export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
@@ -193,6 +195,28 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
             <span>Escuchar y tocar <small>una vuelta con batería, la siguiente solo click</small></span>
             <input type="checkbox" id="escuchar" ${prefs.escucharYTocar ? 'checked' : ''} />
           </label>
+
+          <label class="campo campo--interruptor">
+            <span>Entrenador de velocidad <small>sube solo hasta la meta</small></span>
+            <input type="checkbox" id="ent-activo" ${prefs.entrenador.activo ? 'checked' : ''} />
+          </label>
+          <div class="campos campos--sangria" id="campos-entrenador">
+            <label class="campo">
+              <span>Sube</span>
+              <input type="number" id="ent-incremento" min="1" max="20"
+                     value="${prefs.entrenador.incremento}" /> <small>BPM</small>
+            </label>
+            <label class="campo">
+              <span>Cada</span>
+              <input type="number" id="ent-cada" min="1" max="32"
+                     value="${prefs.entrenador.cadaCompases}" /> <small>compases</small>
+            </label>
+            <label class="campo">
+              <span>Hasta</span>
+              <input type="number" id="ent-meta" min="${BPM_MINIMO}" max="${BPM_MAXIMO}"
+                     value="${prefs.entrenador.bpmMeta}" /> <small>BPM</small>
+            </label>
+          </div>
           <label class="campo">
             <span>Cuenta de entrada</span>
             <select id="entrada">
@@ -432,6 +456,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     volumenBateria: prefs.volumenBateria,
     volumenClick: prefs.volumenClick,
     cuentaEntrada: prefs.cuentaEntrada,
+    entrenador: prefs.entrenador,
   })
 
   function guardarPrefs(): void {
@@ -483,6 +508,13 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     }
     reproductor = crearReproductor(contexto, ejercicio!, opcionesActuales())
     reproductor.alEvento((evento) => cola.push(evento))
+    // Cuando el entrenador sube el tempo, el número de la barra lo sigue.
+    reproductor.alCambiarBpm((nuevo) => {
+      bpm = nuevo
+      bpmNumero.textContent = String(nuevo)
+      bpmRango.value = String(nuevo)
+      guardar(`bpm:${ejercicio!.id}`, { bpm })
+    })
     reproductor.iniciar()
     pintarTransporte()
     animacion = requestAnimationFrame(bucleVisual)
@@ -552,6 +584,26 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   casilla('sin-manos', (v) => (prefs.silenciarManos = v))
   casilla('sin-pies', (v) => (prefs.silenciarPies = v))
   casilla('escuchar', (v) => (prefs.escucharYTocar = v))
+  casilla('ent-activo', (v) => {
+    prefs.entrenador.activo = v
+    $<HTMLElement>('campos-entrenador').hidden = !v
+  })
+  $<HTMLElement>('campos-entrenador').hidden = !prefs.entrenador.activo
+
+  const numero = (id: string, asignar: (valor: number) => void): void => {
+    const campo = $<HTMLInputElement>(id)
+    campo.addEventListener('change', () => {
+      const min = Number(campo.min)
+      const max = Number(campo.max)
+      const valor = Math.min(max, Math.max(min, Math.round(Number(campo.value) || min)))
+      campo.value = String(valor)
+      asignar(valor)
+      guardarPrefs()
+    })
+  }
+  numero('ent-incremento', (v) => (prefs.entrenador.incremento = v))
+  numero('ent-cada', (v) => (prefs.entrenador.cadaCompases = v))
+  numero('ent-meta', (v) => (prefs.entrenador.bpmMeta = v))
   casilla('ver-sticking', (v) => (prefs.mostrarSticking = v), true)
   casilla('ver-conteo', (v) => (prefs.mostrarConteo = v), true)
 
