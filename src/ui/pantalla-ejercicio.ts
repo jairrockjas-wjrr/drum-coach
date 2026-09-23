@@ -79,8 +79,8 @@ const POR_DEFECTO: Preferencias = {
 
 export function montarEjercicio(raiz: HTMLElement, id: string, desde = ''): () => void {
   // De dónde vino: si entraste desde una lección, el botón de volver regresa a
-  // esa lección. Si no, a la lista de ejercicios.
-  const atras = desde.startsWith('/') ? `#${desde}` : '#/ejercicios'
+  // esa lección. Si no, a la ruta de lecciones, que es de donde se llega.
+  const atras = desde.startsWith('/') ? `#${desde}` : '#/lectura'
 
   const ejercicio = EJERCICIOS.find((e) => e.id === id)
   if (!ejercicio) {

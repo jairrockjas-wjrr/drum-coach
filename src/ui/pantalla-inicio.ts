@@ -42,13 +42,8 @@ const MODULOS: Modulo[] = [
   },
   {
     nombre: 'Lectura desde cero',
-    nota: 'nueve lecciones: del pentagrama al swing',
+    nota: 'el camino entero: cada lección con sus ejercicios',
     ruta: '#/lectura',
-  },
-  {
-    nombre: 'Ejercicios con partitura',
-    nota: 'se ven en partitura y se escuchan con la batería',
-    ruta: '#/ejercicios',
   },
   { nombre: 'Generador de remates', nota: 'próxima fase · fills nuevos cada vez' },
   { nombre: 'Generador de partitura', nota: 'en proceso' },

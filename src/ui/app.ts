@@ -3,7 +3,6 @@
 
 import { montarPantallaInicio } from './pantalla-inicio'
 import { montarMetronomo } from './pantalla-metronomo'
-import { montarListaEjercicios } from './pantalla-ejercicios'
 import { montarEjercicio } from './pantalla-ejercicio'
 import { montarLectura } from './pantalla-lectura'
 import { montarLeccion } from './pantalla-leccion'
@@ -32,7 +31,10 @@ export function iniciarApp(raiz: HTMLElement): void {
     } else if (ruta === '/figuras') {
       limpiar = montarFiguras(raiz)
     } else if (ruta === '/ejercicios') {
-      montarListaEjercicios(raiz)
+      // La lista suelta de ejercicios ya no existe: ahora cada uno vive dentro
+      // de su lección. Se redirige para no dejar tirado un enlace guardado.
+      location.replace('#/lectura')
+      return
     } else if (ruta.startsWith('/ejercicio/')) {
       limpiar = montarEjercicio(raiz, ruta.slice('/ejercicio/'.length), desde)
     } else if (ruta === '/lectura') {

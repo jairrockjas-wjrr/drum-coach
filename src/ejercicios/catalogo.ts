@@ -176,6 +176,49 @@ export const EJERCICIOS: Ejercicio[] = [
 
   // ------------------------------------------------------------------
   {
+    id: 'silencios-corcheas',
+    titulo: 'Corcheas y sus silencios',
+    estilo: 'lectura',
+    nivel: 1,
+    compas: CUATRO_CUARTOS,
+    bpmSugerido: 65,
+    descripcion: 'La corchea y el silencio de corchea, turnándose dentro del tiempo.',
+    consejo: 'Cuenta "1 y 2 y 3 y 4 y" entero. El silencio se cuenta igual que la nota: lo que cambia es que no pegas.',
+    compases: [
+      // El hueco en la "y": la mano sigue el movimiento pero no toca.
+      {
+        manos: veces(8, (i) =>
+          i % 2 === 0 ? corchea(['tarola'], { mano: 'R' }) : calla('corchea'),
+        ),
+        pies: [],
+      },
+      // Ahora al revés: calla el número y suena la "y".
+      {
+        manos: veces(8, (i) =>
+          i % 2 === 0 ? calla('corchea') : corchea(['tarola'], { mano: 'R' }),
+        ),
+        pies: [],
+      },
+      // Mezclado: dos seguidas y un hueco.
+      {
+        manos: [
+          corchea(['tarola'], { mano: 'R' }),
+          corchea(['tarola'], { mano: 'L' }),
+          calla('corchea'),
+          corchea(['tarola'], { mano: 'R' }),
+          corchea(['tarola'], { mano: 'L' }),
+          calla('corchea'),
+          corchea(['tarola'], { mano: 'R' }),
+          corchea(['tarola'], { mano: 'L' }),
+        ],
+        pies: [],
+      },
+      remate(2),
+    ],
+  },
+
+  // ------------------------------------------------------------------
+  {
     id: 'lectura-semicorcheas',
     titulo: 'Semicorcheas: 1 e y a',
     estilo: 'lectura',
@@ -209,6 +252,44 @@ export const EJERCICIOS: Ejercicio[] = [
           ...veces(8, (i) => semi(['tarola'], { mano: alternando(i) })),
           ...veces(4, (i) => corchea(['tarola'], { mano: alternando(i) })),
         ],
+        pies: [],
+      },
+      remate(4),
+    ],
+  },
+
+  // ------------------------------------------------------------------
+  {
+    id: 'silencios-semicorcheas',
+    titulo: 'Semicorcheas y sus silencios',
+    estilo: 'lectura',
+    nivel: 2,
+    compas: CUATRO_CUARTOS,
+    bpmSugerido: 55,
+    descripcion: 'La semicorchea y su silencio: quitar una de las cuatro del tiempo.',
+    consejo: 'Cuenta "1 e y a" completo aunque falte una. Muy lento: aquí se pierde el sitio en cuanto corres.',
+    compases: [
+      // Falta la primera de cada grupo: entra en la "e".
+      {
+        manos: veces(16, (i) =>
+          i % 4 === 0 ? calla('semicorchea') : semi(['tarola'], { mano: alternando(i) }),
+        ),
+        pies: [],
+      },
+      // Falta la última: "1 e y" y hueco.
+      {
+        manos: veces(16, (i) =>
+          i % 4 === 3 ? calla('semicorchea') : semi(['tarola'], { mano: alternando(i) }),
+        ),
+        pies: [],
+      },
+      // Solo la primera y la última de cada tiempo: el hueco va en medio.
+      {
+        manos: veces(16, (i) =>
+          i % 4 === 1 || i % 4 === 2
+            ? calla('semicorchea')
+            : semi(['tarola'], { mano: alternando(i) }),
+        ),
         pies: [],
       },
       remate(4),

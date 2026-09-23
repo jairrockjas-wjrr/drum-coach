@@ -50,6 +50,10 @@ export function montarLeccion(raiz: HTMLElement, id: string): () => void {
   let contexto: AudioContext | null = null
   let sonando: number | null = null
 
+  // Para llevar de la mano: al acabar, el enlace a la lección siguiente.
+  const posicion = LECCIONES.findIndex((l) => l.id === leccion.id)
+  const siguiente = LECCIONES[posicion + 1]
+
   const practicables = leccion.practica
     .map((idEjercicio) => EJERCICIOS.find((e) => e.id === idEjercicio))
     .filter((e): e is Ejercicio => Boolean(e))
@@ -109,6 +113,18 @@ export function montarLeccion(raiz: HTMLElement, id: string): () => void {
     <button class="boton ${hechas[leccion.id] ? 'boton--activo' : ''}" id="hecha">
       ${hechas[leccion.id] ? '✓ Lección hecha' : 'Marcar como hecha'}
     </button>
+
+    ${
+      siguiente
+        ? `<a class="boton modulo modulo--listo" href="#/leccion/${siguiente.id}">
+             <span>Siguiente: ${siguiente.titulo}</span>
+             <small>${siguiente.resumen}</small>
+           </a>`
+        : `<a class="boton modulo modulo--listo" href="#/lectura">
+             <span>Has llegado al final</span>
+             <small>Vuelve a la ruta para repasar lo que quieras</small>
+           </a>`
+    }
   `
 
   /** Hace sonar una pieza suelta, para oírla desde la leyenda. */

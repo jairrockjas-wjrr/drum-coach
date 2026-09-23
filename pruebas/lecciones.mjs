@@ -44,6 +44,15 @@ for (const leccion of LECCIONES) {
   }
 }
 
+// Y al revés: ya no hay lista suelta de ejercicios, así que uno que no cuelgue
+// de ninguna lección se queda sin forma de llegar a él.
+const usados = new Set(LECCIONES.flatMap((l) => l.practica))
+for (const ejercicio of EJERCICIOS) {
+  if (!usados.has(ejercicio.id)) {
+    problemas.push(`el ejercicio "${ejercicio.id}" no aparece en ninguna lección: no hay cómo llegar a él`)
+  }
+}
+
 if (problemas.length > 0) {
   console.error('\nLecciones con problemas:\n')
   for (const p of problemas) console.error('  ✗ ' + p)

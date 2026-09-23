@@ -178,7 +178,7 @@ export const LECCIONES: Leccion[] = [
         ],
       },
     ],
-    practica: ['lectura-corcheas'],
+    practica: ['lectura-corcheas', 'silencios-corcheas'],
   },
 
   {
@@ -210,7 +210,7 @@ export const LECCIONES: Leccion[] = [
         ],
       },
     ],
-    practica: ['lectura-semicorcheas'],
+    practica: ['lectura-semicorcheas', 'silencios-semicorcheas'],
   },
 
   {

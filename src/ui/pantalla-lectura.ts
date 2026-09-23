@@ -20,8 +20,9 @@ export function montarLectura(raiz: HTMLElement): void {
     </header>
 
     <p class="nota">
-      Nueve lecciones en orden, de no saber nada a leer un groove entero. Cada una
-      explica una idea, te la deja oír y te manda a los ejercicios donde se practica.
+      ${LECCIONES.length} lecciones en orden, de no saber nada a leer un groove entero.
+      Cada una explica una idea, te la deja oír y trae debajo sus propios
+      ejercicios. No hace falta salir a ningún otro sitio.
       ${cuantas > 0 ? `Llevas <strong>${cuantas} de ${LECCIONES.length}</strong>.` : ''}
     </p>
 
