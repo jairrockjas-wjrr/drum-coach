@@ -38,9 +38,9 @@ solo se descarga el elegido.
 
 | Kit | Cómo suena | Pesa |
 |---|---|---|
-| **Rock grande** (`rock`) | Gordo y seco. Tambores afinados abajo y bien comprimidos. | 162 KB |
-| **Estudio seco** (`estudio`) | Más apretado y con más ataque, menos grave. Sonido de disco. | 144 KB |
-| **Natural** (`natural`) | Casi sin tocar: la batería como se grabó, con su resonancia. | 200 KB |
+| **Rock grande** (`rock`) | Gordo y seco. Tambores afinados abajo y bien comprimidos. | 171 KB |
+| **Estudio seco** (`estudio`) | Más apretado y con más ataque, menos grave. Sonido de disco. | 152 KB |
+| **Natural** (`natural`) | Casi sin tocar: la batería como se grabó, con su resonancia. | 213 KB |
 
 Todo acaba en mono 44,1 kHz y AAC (.m4a), que es lo que reproduce Safari en iPhone.
 

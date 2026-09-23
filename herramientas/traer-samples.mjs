@@ -219,44 +219,70 @@ const PIEZAS = {
     nivel: 0.78,
     segundos: 2.4,
   },
+  // Los tres toms salen del tom agudo y del grave del pack, afinados para que
+  // queden repartidos como en un kit de verdad: unos 180, 140 y 100 Hz. Antes
+  // se les bajaba demasiado y el medio y el de piso acababan en 90 y 80 Hz,
+  // por debajo de la tarola y encima del bombo: sonaba a barro.
   tomAgudo: {
     carpeta: 'htom',
     articulacion: 'center',
     capas: [['mid', 1], ['oh', 0.4], ['room', 0.16]],
     fuerza: 0.85,
-    afinacion: 0.78, // tom de rock
+    afinacion: 1,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 50 },
-      { tipo: 'graves', frecuencia: 90, db: 6 },
-      { tipo: 'pico', frecuencia: 420, q: 1.3, db: -8 }, // el cartón, fuera
-      { tipo: 'pico', frecuencia: 3200, q: 1.3, db: 2 }, // la baqueta, sin pasarse
-      { tipo: 'agudos', frecuencia: 6000, db: -5 },
+      { tipo: 'pasaaltos', frecuencia: 70 },
+      { tipo: 'graves', frecuencia: 150, db: 4 },
+      { tipo: 'pico', frecuencia: 500, q: 1.3, db: -7 }, // el cartón, fuera
+      { tipo: 'pico', frecuencia: 3500, q: 1.3, db: 2 }, // la baqueta
+      { tipo: 'agudos', frecuencia: 6500, db: -4 },
     ],
     compresor: { umbralDb: -19, ratio: 5, ataqueMs: 8, soltarMs: 200, compensarDb: 5 },
-    puerta: { mantenerMs: 115, caidaMs: 460 },
+    puerta: { mantenerMs: 95, caidaMs: 380 },
     saturacion: 0.26,
     nivel: 0.85,
     segundos: 1.3,
   },
   tomMedio: {
-    carpeta: 'ltom',
+    // El mismo tom agudo, bajado: así los dos tienen el mismo carácter.
+    carpeta: 'htom',
     articulacion: 'center',
-    capas: [['mid', 1], ['oh', 0.4], ['room', 0.16]],
+    capas: [['mid', 1], ['oh', 0.4], ['room', 0.18]],
     fuerza: 0.85,
     afinacion: 0.77,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 42 },
-      { tipo: 'graves', frecuencia: 78, db: 6 },
-      { tipo: 'pico', frecuencia: 380, q: 1.3, db: -8 },
-      { tipo: 'pico', frecuencia: 2800, q: 1.3, db: 2 },
-      { tipo: 'agudos', frecuencia: 5500, db: -5 },
+      { tipo: 'pasaaltos', frecuencia: 55 },
+      { tipo: 'graves', frecuencia: 120, db: 4.5 },
+      { tipo: 'pico', frecuencia: 450, q: 1.3, db: -7 },
+      { tipo: 'pico', frecuencia: 3200, q: 1.3, db: 2 },
+      { tipo: 'agudos', frecuencia: 6000, db: -4 },
     ],
     compresor: { umbralDb: -19, ratio: 5, ataqueMs: 8, soltarMs: 240, compensarDb: 5 },
-    puerta: { mantenerMs: 135, caidaMs: 560 },
+    puerta: { mantenerMs: 115, caidaMs: 460 },
     saturacion: 0.26,
     nivel: 0.88,
-    segundos: 1.5,
+    segundos: 1.4,
   },
+  tomPiso: {
+    // Este sí sale del tom grave del pack, que tiene el cuerpo que hace falta.
+    carpeta: 'ltom',
+    articulacion: 'center',
+    capas: [['mid', 1], ['oh', 0.4], ['room', 0.2]],
+    fuerza: 0.85,
+    afinacion: 0.85,
+    eq: [
+      { tipo: 'pasaaltos', frecuencia: 45 },
+      { tipo: 'graves', frecuencia: 90, db: 5 },
+      { tipo: 'pico', frecuencia: 380, q: 1.3, db: -7 },
+      { tipo: 'pico', frecuencia: 2800, q: 1.3, db: 2 },
+      { tipo: 'agudos', frecuencia: 5500, db: -4 },
+    ],
+    compresor: { umbralDb: -19, ratio: 5, ataqueMs: 9, soltarMs: 280, compensarDb: 5 },
+    puerta: { mantenerMs: 135, caidaMs: 560 },
+    saturacion: 0.26,
+    nivel: 0.9,
+    segundos: 1.6,
+  },
+
 }
 
 /**

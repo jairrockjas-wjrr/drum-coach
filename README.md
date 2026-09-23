@@ -11,11 +11,9 @@ sin servidor y sin conexión: todos los datos se guardan en el propio teléfono.
 - [x] Fase 2 — Metrónomo
 - [x] Fase 3 — Reproductor de ejercicios con partitura
 - [x] Fase 4 — Lectura desde cero
-- [ ] Fase 5 — Jazz
-- [ ] Fase 6 — Doble pedal
-- [ ] Fase 7 — Generador de remates
-- [ ] Fase 8 — Biblioteca de ritmos
-- [ ] Fase 9 — Rutina y progreso
+- [ ] Generador de remates
+- [ ] Biblioteca de ritmos
+- [ ] Rutina y progreso
 
 ## Cómo trabajar en el proyecto
 

@@ -14,10 +14,7 @@
 import { obtenerSalidaBateria } from './contexto'
 import type { Pieza } from '../ejercicios/tipos'
 
-/**
- * Archivo de cada pieza. El pack solo trae dos toms, así que el de piso es el
- * tom grave con la afinación bajada.
- */
+/** Archivo de cada pieza. */
 const ARCHIVOS: Record<Pieza, { archivo: string; velocidad?: number }> = {
   bombo: { archivo: 'bombo' },
   tarola: { archivo: 'tarola' },
@@ -31,9 +28,7 @@ const ARCHIVOS: Record<Pieza, { archivo: string; velocidad?: number }> = {
   crash: { archivo: 'crash' },
   tomAgudo: { archivo: 'tomAgudo' },
   tomMedio: { archivo: 'tomMedio' },
-  // El sample del tom grave ya viene con la afinación bajada, así que aquí
-  // basta con bajarla un poco más para el tom de piso.
-  tomPiso: { archivo: 'tomMedio', velocidad: 0.88 },
+  tomPiso: { archivo: 'tomPiso' },
 }
 
 /**

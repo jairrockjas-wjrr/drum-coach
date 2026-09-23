@@ -299,6 +299,6 @@ export const LECCIONES: Leccion[] = [
         ],
       },
     ],
-    practica: ['rock-basico', 'coordinacion-manos-pies'],
+    practica: ['rock-basico', 'funk-semicorcheas'],
   },
 ]

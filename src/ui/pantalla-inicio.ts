@@ -45,9 +45,7 @@ const MODULOS: Modulo[] = [
     nota: 'nueve lecciones: del pentagrama al swing',
     ruta: '#/lectura',
   },
-  { nombre: 'Jazz', nota: 'Fase 5 · ride, comping e independencia' },
-  { nombre: 'Doble pedal', nota: 'Fase 6 · velocidad y resistencia' },
-  { nombre: 'Generador de remates', nota: 'Fase 7 · fills nuevos cada vez' },
+  { nombre: 'Generador de remates', nota: 'próxima fase · fills nuevos cada vez' },
 ]
 
 export function montarPantallaInicio(raiz: HTMLElement): void {

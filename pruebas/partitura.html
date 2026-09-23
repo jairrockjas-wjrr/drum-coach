@@ -42,7 +42,9 @@
           for (const [tick, xs] of Object.entries(porTick)) {
             if (xs.length < 2) continue
             const dif = Math.max(...xs) - Math.min(...xs)
-            if (dif > 1) desalineadas.push(`${ejercicio.id} (tick ${tick}): ${Math.round(dif)} px`)
+            // Se comparan las cajas de las notas enteras, y una x de crash mide
+            // distinto que una cabeza normal: por debajo de 5 px no es desalineación.
+            if (dif > 5) desalineadas.push(`${ejercicio.id} (tick ${tick}): ${Math.round(dif)} px`)
           }
         } catch (e) {
           errores.push(`${ejercicio.id}: ${e.message}`)
