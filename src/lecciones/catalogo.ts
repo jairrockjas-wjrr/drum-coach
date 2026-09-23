@@ -40,13 +40,24 @@ export const LECCIONES: Leccion[] = [
     ejemplos: [
       {
         titulo: 'Una pieza por tiempo',
-        pie: 'Crash, hi-hat, tarola y tom agudo con las manos; bombo y hi-hat de pie por debajo.',
+        pie: 'Nunca dos a la vez: primero las manos, con la plica hacia arriba; después los pies, colgando por debajo.',
         compas: CUATRO_CUARTOS,
         bpm: 60,
+        // Un golpe por tiempo y uno solo: si sonaran dos piezas juntas no se
+        // distinguiría cuál es cuál, que es justo lo que se está enseñando.
         compases: [
           {
             manos: [negra(['crash']), negra(['hiHatCerrado']), negra(['tarola']), negra(['tomAgudo'])],
-            pies: [negra(['bombo']), calla('negra'), negra(['hiHatPedal']), calla('negra')],
+            pies: [],
+          },
+          {
+            manos: [],
+            pies: [
+              negra(['bombo']),
+              negra(['hiHatPedal']),
+              negra(['bombo']),
+              negra(['hiHatPedal']),
+            ],
           },
         ],
       },

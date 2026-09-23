@@ -209,7 +209,7 @@ export function dibujarPartitura(
   interface CompasArmado {
     voces: Voice[]
     adornos: { setContext: (c: RenderContext) => { draw: () => void } }[]
-    letreros: { indice: number; x: () => number; conteo: string; mano: string }[]
+    letreros: { voz: 'manos' | 'pies'; indice: number; x: () => number; conteo: string; mano: string }[]
     minimo: number
     /** Lleva tresillos: su corchete ocupa el hueco de debajo del pentagrama. */
     conTresillos: boolean
@@ -223,6 +223,11 @@ export function dibujarPartitura(
     const adornos: CompasArmado['adornos'] = []
     const letreros: CompasArmado['letreros'] = []
 
+    // El conteo se saca de la voz de las manos, que es la que se lee. Si el
+    // compás es solo de pies (bombo, hi-hat con el pie), se saca de ahí: si no,
+    // ese compás se quedaba sin números debajo.
+    const vozDelConteo = compas.manos.length > 0 ? 'manos' : 'pies'
+
     for (const voz of ['manos', 'pies'] as const) {
       const notas = compas[voz]
       if (notas.length === 0) continue
@@ -230,12 +235,17 @@ export function dibujarPartitura(
       let ticksEnCompas = 0
       const vexNotas = notas.map((nota, indice) => {
         const vex = crearNotaVex(nota, voz)
-        if (voz === 'manos') {
+        if (voz === vozDelConteo) {
           letreros.push({
+            voz,
             indice,
             x: () => vex.getAbsoluteX(),
             conteo: mostrarConteo ? conteoDeNota(nota, ticksEnCompas, porPulso) : '',
-            mano: mostrarSticking && nota.mano && !esSilencio(nota) ? nota.mano : '',
+            // La digitación es cosa de las manos; los pies no llevan R/L.
+            mano:
+              voz === 'manos' && mostrarSticking && nota.mano && !esSilencio(nota)
+                ? nota.mano
+                : '',
           })
         }
         dibujadas.push({
@@ -430,7 +440,7 @@ export function dibujarPartitura(
         for (const letrero of letreros) {
           const posX = letrero.x()
           const suya = dibujadas.find(
-            (n) => n.compas === i && n.voz === 'manos' && n.indice === letrero.indice,
+            (n) => n.compas === i && n.voz === letrero.voz && n.indice === letrero.indice,
           )
           if (letrero.mano) {
             suya?.letreros.push(crearTexto(svgHoja, posX, yBase + 32, letrero.mano, 'letrero-mano'))
