@@ -1068,6 +1068,11 @@ a.barra__volver {
   opacity: 1;
 }
 
+/* Los silencios no suenan: se miran y ya, así que no invitan a pulsarlos. */
+.figura__caja--muda {
+  cursor: default;
+}
+
 /* Mientras suena se enciende, sin cambiar de tamaño para no mover la lista. */
 .figura__caja--sonando {
   border-color: var(--acento);

@@ -28,52 +28,17 @@ function compasLleno(figura: Figura): Nota[] {
   }))
 }
 
-/**
- * El mismo compás lleno, pero con un hueco en medio: ahí va el silencio.
- *
- * Alternar golpe y silencio no servía: negra, silencio, negra, silencio suena
- * exactamente igual que dos blancas, porque los golpes caen en el mismo sitio.
- * Con el hueco metido dentro del chorro de notas sí se oye qué es un silencio:
- * el click sigue corriendo y falta un golpe.
- */
-function compasConHueco(figura: Figura): Nota[] {
-  const cuantas = cuantasEntran(figura)
-  // El tercero si los hay; si la figura solo entra dos veces, el segundo.
-  const hueco = Math.min(2, cuantas - 1)
-  return Array.from({ length: cuantas }, (_, i) =>
-    i === hueco
-      ? { figura, piezas: [] }
-      : { figura, piezas: ['tarola' as const], mano: i % 2 === 0 ? ('R' as const) : ('L' as const) },
-  )
-}
-
-/**
- * La redonda llena el compás ella sola, así que no hay dónde meterle el hueco:
- * su silencio son dos compases, uno sonando y otro callado con el click.
- */
-function ejercicioDeFigura(figura: Figura, conSilencios: boolean): Ejercicio {
-  const compases =
-    conSilencios && figura === 'redonda'
-      ? [
-          { manos: [{ figura, piezas: ['tarola' as const] }], pies: [] },
-          { manos: [{ figura, piezas: [] }], pies: [] },
-        ]
-      : [
-          {
-            manos: conSilencios ? compasConHueco(figura) : compasLleno(figura),
-            pies: [],
-          },
-        ]
-
+/** Un compás lleno de esa figura, para oír cuántas entran. */
+function ejercicioDeFigura(figura: Figura): Ejercicio {
   return {
-    id: `figura-${figura}${conSilencios ? '-silencios' : ''}`,
+    id: `figura-${figura}`,
     titulo: figura,
     estilo: 'lectura',
     nivel: 1,
     compas: { pulsos: 4, figura: 4 },
     bpmSugerido: BPM,
     descripcion: figura,
-    compases,
+    compases: [{ manos: compasLleno(figura), pies: [] }],
   }
 }
 
@@ -94,9 +59,9 @@ export function montarFiguras(raiz: HTMLElement): () => void {
 
     <section class="tarjeta">
       <p class="nota">
-        Pulsa cualquier dibujo para escucharlo: suena un compás entero de esa
-        figura con el click detrás. En los silencios falta un golpe en medio,
-        que es justo lo que hace un silencio. Vuelve a pulsar para parar.
+        Pulsa una figura para escucharla: suena un compás entero de ella con el
+        click detrás. Vuelve a pulsar para parar. Los silencios no suenan —
+        eso es lo que son— y están ahí solo para que aprendas a reconocerlos.
       </p>
       <div class="figuras">
         ${FIGURAS.map((f, i) => {
@@ -108,16 +73,15 @@ export function montarFiguras(raiz: HTMLElement): () => void {
               <p>Dura ${f.dura} · ${entran === 1 ? 'entra 1' : `entran ${entran}`} en un compás de 4/4</p>
             </div>
             <div class="figura__dibujos">
-              <button class="figura__caja" type="button" data-figura="${i}" data-silencio="0">
+              <button class="figura__caja" type="button" data-figura="${i}">
                 <span class="figura__lienzo" id="lienzo-${i}"></span>
                 <small>${f.nombre}</small>
                 ${ICONO_PARAR}
               </button>
-              <button class="figura__caja" type="button" data-figura="${i}" data-silencio="1">
+              <span class="figura__caja figura__caja--muda">
                 <span class="figura__lienzo" id="silencio-${i}"></span>
                 <small>${f.nombreSilencio}</small>
-                ${ICONO_PARAR}
-              </button>
+              </span>
             </div>
           </article>`
         }).join('')}
@@ -137,7 +101,7 @@ export function montarFiguras(raiz: HTMLElement): () => void {
             <p>Dos corcheas unidas por una barra: un tiempo entre las dos.</p>
           </div>
           <div class="figura__dibujos">
-            <button class="figura__caja" type="button" data-figura="3" data-silencio="0">
+            <button class="figura__caja" type="button" data-figura="3">
               <span class="figura__lienzo" id="unidas-corchea"></span>
               <small>Dos corcheas</small>
               ${ICONO_PARAR}
@@ -150,7 +114,7 @@ export function montarFiguras(raiz: HTMLElement): () => void {
             <p>Dos barras en vez de una: cuantas más barras, más corta la figura.</p>
           </div>
           <div class="figura__dibujos">
-            <button class="figura__caja" type="button" data-figura="4" data-silencio="0">
+            <button class="figura__caja" type="button" data-figura="4">
               <span class="figura__lienzo" id="unidas-semicorchea"></span>
               <small>Dos semicorcheas</small>
               ${ICONO_PARAR}
@@ -194,14 +158,13 @@ export function montarFiguras(raiz: HTMLElement): () => void {
   const escuchar = async (caja: HTMLButtonElement): Promise<void> => {
     const ficha = FIGURAS[Number(caja.dataset.figura)]
     if (!ficha) return
-    const conSilencios = caja.dataset.silencio === '1'
 
     detener()
     contexto = await desbloquearAudio()
     if (!haySonidosReales(kit)) await cargarBateria(contexto, kit)
 
     caja.classList.add('figura__caja--sonando')
-    reproductor = crearReproductor(contexto, ejercicioDeFigura(ficha.figura, conSilencios), {
+    reproductor = crearReproductor(contexto, ejercicioDeFigura(ficha.figura), {
       bpm: BPM,
       loop: false,
       conClick: true,
@@ -215,13 +178,12 @@ export function montarFiguras(raiz: HTMLElement): () => void {
     })
     reproductor.iniciar()
 
-    // Se apaga solo al acabar el compás (o los dos de la redonda).
-    const compases = ficha.figura === 'redonda' && conSilencios ? 2 : 1
-    apagado = window.setTimeout(detener, (compases * 4 * 60_000) / BPM + 200)
+    // Se apaga solo al acabar el compás.
+    apagado = window.setTimeout(detener, (4 * 60_000) / BPM + 200)
   }
 
   raiz.addEventListener('click', (evento) => {
-    const caja = (evento.target as HTMLElement).closest<HTMLButtonElement>('.figura__caja')
+    const caja = (evento.target as HTMLElement).closest<HTMLButtonElement>('button.figura__caja')
     if (!caja) return
     // Si ya está sonando ésa, el mismo botón la para.
     if (caja.classList.contains('figura__caja--sonando')) detener()
