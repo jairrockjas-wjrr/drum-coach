@@ -177,7 +177,10 @@ export function dibujarPartitura(
   // corchetes de tresillo) y abajo (bombo, hi-hat de pie y las dos filas de
   // texto). Apretarlo es lo que hacía que se encimara todo.
   const MARGEN_ARRIBA = 46
-  const ALTO_RENGLON = 168
+  // Ojo: VexFlow reserva 40 px suyos por encima del pentagrama, así que la
+  // línea de abajo cae a 80 px del inicio del renglón. Debajo van todavía el
+  // corchete del tresillo (26) y las dos filas de texto (hasta 49).
+  const ALTO_RENGLON = 215
   const EXTRA_PRIMERO = 62 // lo que ocupan la clave y el compás
   const AIRE = 34 // espacio de respeto a cada lado de la música
 
@@ -306,7 +309,7 @@ export function dibujarPartitura(
   // En la tira el lienzo se ajusta a la música (pentagrama + las dos filas de
   // texto). Cuanto menos aire sobre, más grandes salen las notas en pantalla.
   let altoLienzo = unaLinea
-    ? MARGEN_ARRIBA + 130
+    ? MARGEN_ARRIBA + 175
     : MARGEN_ARRIBA + renglones * altoRenglon + 16
   let desplazamiento = 0
   if (alto && !unaLinea) {
