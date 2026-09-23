@@ -14,3 +14,6 @@ interface Window {
   // Safari antiguo exponía el AudioContext con prefijo.
   webkitAudioContext?: typeof AudioContext
 }
+
+/** Identificador de la compilación, inyectado por Vite. */
+declare const __COMPILACION__: string

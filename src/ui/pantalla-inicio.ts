@@ -82,7 +82,7 @@ export function montarPantallaInicio(raiz: HTMLElement): void {
       </div>
     </section>
 
-    <p class="pie">Versión 0.2 · Fase 2: metrónomo</p>
+    <p class="pie">Versión 0.2 · Fase 2: metrónomo · compilación ${__COMPILACION__}</p>
   `
 
   const boton = raiz.querySelector<HTMLButtonElement>('#probar-audio')!

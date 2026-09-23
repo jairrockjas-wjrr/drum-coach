@@ -265,7 +265,11 @@ export function crearMotor(contexto: AudioContext, configInicial: ConfigMetronom
         tiempoEvento = margen
       }
 
-      anclas = []
+      // Se conservan las anclas de pulsos que YA sonaron: si cambias el tempo
+      // otra vez enseguida (arrastrando el deslizador o dando varios +5), la
+      // siguiente vez también hay desde dónde medir. Si se vaciaran, el segundo
+      // cambio y los siguientes tendrían que esperar al pulso siguiente.
+      anclas = anclas.filter((a) => a.inicio <= ahora)
       revisar()
     },
 
