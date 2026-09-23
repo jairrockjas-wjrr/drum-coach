@@ -709,8 +709,11 @@ a.barra__volver {
 }
 
 .tempo__valor {
-  flex: 1;
-  min-width: 48px;
+  /* Sin flex: el número no se estira, así los pasos quedan pegados a él
+     en vez de repartirse por toda la barra. */
+  flex: none;
+  min-width: 62px;
+  padding: 0 2px;
   display: flex;
   align-items: baseline;
   justify-content: center;
@@ -806,9 +809,26 @@ a.barra__volver {
 
 /* La línea de estado va debajo del metrónomo, no abajo del todo. */
 .app--completa .estado-ejercicio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   margin: 0;
   padding: 6px 14px 0;
   text-align: center;
+}
+
+/* El compás, siempre a la vista: en la partitura solo se escribe al empezar
+   del todo, para no repetirlo en cada vuelta. */
+.compas {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--superficie-alta);
+  border: 1px solid var(--borde);
+  color: var(--texto);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 /* --- Panel de ajustes que sube desde abajo --- */

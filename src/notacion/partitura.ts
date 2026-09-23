@@ -349,10 +349,11 @@ export function dibujarPartitura(
     const y = MARGEN_ARRIBA + desplazamiento + renglon * altoRenglon
 
     for (let i = desde; i < hasta; i++) {
-      // En la tira no se escribe clave ni compás en ninguna parte: van en la
-      // línea de estado. Así TODOS los compases miden exactamente lo mismo, el
-      // cursor avanza a velocidad constante y el salto de vuelta es exacto.
-      const conHueco = unaLinea ? false : i === desde
+      // En la tira, la clave y el compás se escriben una sola vez, al empezar
+      // del todo. Ese primer compás es el único más ancho; todos los demás
+      // miden igual, que es lo que mantiene el cursor a velocidad constante y
+      // el salto de vuelta exacto (la música se sigue en la copia del medio).
+      const conHueco = unaLinea ? i === 0 : i === desde
       const conClave = conHueco
       const anchoCompas = anchoCompasBase + (conHueco ? EXTRA_PRIMERO : 0)
       const stave = new Stave(x, y, anchoCompas)
