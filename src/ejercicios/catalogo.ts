@@ -95,13 +95,33 @@ export const EJERCICIOS: Ejercicio[] = [
   // ------------------------------------------------------------------
   {
     id: 'lectura-negras',
-    titulo: 'Negras y silencios',
+    titulo: 'El pulso en negras',
     estilo: 'lectura',
     nivel: 1,
     compas: CUATRO_CUARTOS,
     bpmSugerido: 70,
-    descripcion: 'El primer paso: una nota por tiempo y aprender a contar los silencios.',
-    consejo: 'Cuenta 1-2-3-4 en voz alta, también en los silencios.',
+    descripcion: 'Una nota en cada tiempo, sin huecos: el pulso y nada más.',
+    consejo: 'Cuenta 1-2-3-4 en voz alta y alterna las manos. Aburrido es buena señal: significa que va parejo.',
+    // Sin silencios a propósito: aquí lo único que se practica es que el pulso
+    // no se mueva. Los huecos llegan en la lección siguiente.
+    compases: [
+      { manos: veces(4, (i) => negra(['tarola'], { mano: alternando(i) })), pies: [] },
+      { manos: veces(4, (i) => negra(['tarola'], { mano: alternando(i) })), pies: [] },
+      { manos: veces(4, (i) => negra(['tarola'], { mano: alternando(i) })), pies: [] },
+      remate(1),
+    ],
+  },
+
+  // ------------------------------------------------------------------
+  {
+    id: 'silencios-negras',
+    titulo: 'Negras y sus silencios',
+    estilo: 'lectura',
+    nivel: 1,
+    compas: CUATRO_CUARTOS,
+    bpmSugerido: 70,
+    descripcion: 'Los mismos tiempos, pero con huecos: aprender a contar lo que no suena.',
+    consejo: 'Cuenta 1-2-3-4 en voz alta, también en los silencios. Ese es el ejercicio entero.',
     compases: [
       { manos: veces(4, (i) => negra(['tarola'], { mano: alternando(i) })), pies: [] },
       {

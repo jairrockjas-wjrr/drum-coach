@@ -136,7 +136,7 @@ export const LECCIONES: Leccion[] = [
         ],
       },
     ],
-    practica: ['lectura-negras'],
+    practica: ['silencios-negras'],
   },
 
   {
