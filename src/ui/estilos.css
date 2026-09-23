@@ -966,7 +966,10 @@ a.barra__volver {
    vuelta para que la cuenta sea corrida. */
 .numero-compas {
   font: 700 12px system-ui, -apple-system, sans-serif;
-  fill: #7b1220; /* rojo vino */
+  /* Relleno y contorno del mismo rojo vino, para que se vea macizo. */
+  fill: #7b1220;
+  stroke: #7b1220;
+  stroke-width: 0.6;
   text-anchor: start;
 }
 

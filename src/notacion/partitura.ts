@@ -363,8 +363,10 @@ export function dibujarPartitura(
         // Las líneas del pentagrama caen en y+40, 50, 60, 70 y 80. Las cifras
         // van pegadas a las dos de en medio, como en las partituras impresas.
         const xCompas = x + 46
-        crearTexto(svgCabecera, xCompas, y + 55, String(ejercicio.compas.pulsos), 'compas-cifra')
-        crearTexto(svgCabecera, xCompas, y + 73, String(ejercicio.compas.figura), 'compas-cifra')
+        // La de arriba centrada en la segunda línea (y+50) y la de abajo en la
+        // cuarta (y+70): es donde van en una partitura impresa.
+        crearTexto(svgCabecera, xCompas, y + 56, String(ejercicio.compas.pulsos), 'compas-cifra')
+        crearTexto(svgCabecera, xCompas, y + 76, String(ejercicio.compas.figura), 'compas-cifra')
       }
       x += EXTRA_PRIMERO
     }
