@@ -998,3 +998,74 @@ a.barra__volver {
 .tarjeta .boton + .nota {
   margin-top: 10px;
 }
+
+/* --- Tabla de figuras: cada símbolo dibujado, en su recuadro,
+       del mismo tamaño y pulsable para oírlo. --- */
+.figuras {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.figura {
+  background: var(--superficie-alta);
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.figura__cabecera h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.figura__cabecera p {
+  margin: 2px 0 10px;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.figura__dibujos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.figura__caja {
+  flex: 1 1 130px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 6px;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.figura__caja small {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+
+/* Mientras suena se enciende, sin cambiar de tamaño para no mover la lista. */
+.figura__caja--sonando {
+  border-color: var(--acento);
+  background: color-mix(in srgb, var(--acento) 16%, var(--superficie-alta));
+}
+
+.figura__lienzo {
+  flex: none;
+  display: block;
+  background: #fbfbfa;
+  border-radius: 10px;
+  line-height: 0;
+}
+
+.figura__lienzo svg {
+  display: block;
+}

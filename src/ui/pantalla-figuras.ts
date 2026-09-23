@@ -1,0 +1,204 @@
+// Módulo "Representación de cada nota": la tabla de figuras y silencios.
+//
+// Cada símbolo se puede pulsar para oírlo: se toca un compás entero lleno de
+// esa figura, con el click detrás, que es la forma de entender de verdad
+// cuántas entran en un compás.
+
+import { desbloquearAudio } from '../audio/contexto'
+import { KIT_POR_DEFECTO, cargarBateria, haySonidosReales, type Kit } from '../audio/bateria'
+import { FIGURAS, cuantasEntran } from '../notacion/figuras'
+import { crearReproductor, type Reproductor } from '../ejercicios/reproductor'
+import type { Ejercicio, Figura, Nota } from '../ejercicios/tipos'
+import { leer } from '../datos/preferencias'
+
+const BPM = 60
+
+/** Un compás lleno de esa figura, para oír cuántas entran. */
+function compasLleno(figura: Figura): Nota[] {
+  return Array.from({ length: cuantasEntran(figura) }, (_, i) => ({
+    figura,
+    piezas: ['tarola' as const],
+    mano: i % 2 === 0 ? ('R' as const) : ('L' as const),
+  }))
+}
+
+/** El mismo compás, pero alternando la figura con su silencio. */
+function compasConSilencios(figura: Figura): Nota[] {
+  const pares = cuantasEntran(figura) / 2
+  const notas: Nota[] = []
+  for (let i = 0; i < pares; i++) {
+    notas.push({ figura, piezas: ['tarola'], mano: i % 2 === 0 ? 'R' : 'L' })
+    notas.push({ figura, piezas: [] })
+  }
+  return notas
+}
+
+/**
+ * La redonda no cabe dos veces en un compás, así que su pareja de nota y
+ * silencio ocupa dos compases: uno sonando y otro callado.
+ */
+function ejercicioDeFigura(figura: Figura, conSilencios: boolean): Ejercicio {
+  const compases =
+    conSilencios && figura === 'redonda'
+      ? [
+          { manos: [{ figura, piezas: ['tarola' as const] }], pies: [] },
+          { manos: [{ figura, piezas: [] }], pies: [] },
+        ]
+      : [
+          {
+            manos: conSilencios ? compasConSilencios(figura) : compasLleno(figura),
+            pies: [],
+          },
+        ]
+
+  return {
+    id: `figura-${figura}${conSilencios ? '-silencios' : ''}`,
+    titulo: figura,
+    estilo: 'lectura',
+    nivel: 1,
+    compas: { pulsos: 4, figura: 4 },
+    bpmSugerido: BPM,
+    descripcion: figura,
+    compases,
+  }
+}
+
+export function montarFiguras(raiz: HTMLElement): () => void {
+  const kit: Kit = leer<{ kit: Kit }>('reproductor', { kit: KIT_POR_DEFECTO }).kit
+  let reproductor: Reproductor | null = null
+  let contexto: AudioContext | null = null
+
+  raiz.innerHTML = `
+    <header class="barra">
+      <a class="barra__volver" href="#">‹ Inicio</a>
+    </header>
+
+    <header class="encabezado">
+      <h1>Representación de cada nota</h1>
+      <p>Cuánto dura cada figura, su silencio, y cuántas entran en un compás de 4/4.</p>
+    </header>
+
+    <section class="tarjeta">
+      <p class="nota">Pulsa cualquier dibujo para escucharlo: suena un compás entero de esa figura con el click detrás.</p>
+      <div class="figuras">
+        ${FIGURAS.map((f, i) => {
+          const entran = cuantasEntran(f.figura)
+          return `
+          <article class="figura">
+            <div class="figura__cabecera">
+              <h2>${f.nombre}</h2>
+              <p>Dura ${f.dura} · ${entran === 1 ? 'entra 1' : `entran ${entran}`} en un compás de 4/4</p>
+            </div>
+            <div class="figura__dibujos">
+              <button class="figura__caja" type="button" data-figura="${i}" data-silencio="0">
+                <span class="figura__lienzo" id="lienzo-${i}"></span>
+                <small>${f.nombre}</small>
+              </button>
+              <button class="figura__caja" type="button" data-figura="${i}" data-silencio="1">
+                <span class="figura__lienzo" id="silencio-${i}"></span>
+                <small>${f.nombreSilencio}</small>
+              </button>
+            </div>
+          </article>`
+        }).join('')}
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <h2>Cuando van unidas</h2>
+      <p class="nota">
+        La barra que une dos notas no cambia su duración: solo las agrupa dentro
+        del mismo tiempo para que el compás se lea de un vistazo.
+      </p>
+      <div class="figuras">
+        <article class="figura">
+          <div class="figura__cabecera">
+            <h2>Esto también son corcheas</h2>
+            <p>Dos corcheas unidas por una barra: un tiempo entre las dos.</p>
+          </div>
+          <div class="figura__dibujos">
+            <button class="figura__caja" type="button" data-figura="3" data-silencio="0">
+              <span class="figura__lienzo" id="unidas-corchea"></span>
+              <small>Dos corcheas</small>
+            </button>
+          </div>
+        </article>
+        <article class="figura">
+          <div class="figura__cabecera">
+            <h2>Esto también son semicorcheas</h2>
+            <p>Dos barras en vez de una: cuantas más barras, más corta la figura.</p>
+          </div>
+          <div class="figura__dibujos">
+            <button class="figura__caja" type="button" data-figura="4" data-silencio="0">
+              <span class="figura__lienzo" id="unidas-semicorchea"></span>
+              <small>Dos semicorcheas</small>
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
+  `
+
+  // --- Dibujo (VexFlow se descarga aparte) ---
+  void (async () => {
+    const { dibujarFigura } = await import('../notacion/partitura')
+    FIGURAS.forEach((f, i) => {
+      const nota = raiz.querySelector<HTMLDivElement>(`#lienzo-${i}`)
+      const silencio = raiz.querySelector<HTMLDivElement>(`#silencio-${i}`)
+      if (nota) dibujarFigura(nota, f.figura)
+      if (silencio) dibujarFigura(silencio, f.figura, { silencio: true })
+    })
+    const dosCorcheas = raiz.querySelector<HTMLDivElement>('#unidas-corchea')
+    const dosSemis = raiz.querySelector<HTMLDivElement>('#unidas-semicorchea')
+    if (dosCorcheas) dibujarFigura(dosCorcheas, 'corchea', { unidas: 2 })
+    if (dosSemis) dibujarFigura(dosSemis, 'semicorchea', { unidas: 2 })
+  })()
+
+  // --- Escuchar ---
+  const detener = (): void => {
+    reproductor?.detener()
+    reproductor = null
+    for (const caja of raiz.querySelectorAll('.figura__caja--sonando')) {
+      caja.classList.remove('figura__caja--sonando')
+    }
+  }
+
+  const escuchar = async (caja: HTMLButtonElement): Promise<void> => {
+    const ficha = FIGURAS[Number(caja.dataset.figura)]
+    if (!ficha) return
+    const conSilencios = caja.dataset.silencio === '1'
+
+    detener()
+    contexto = await desbloquearAudio()
+    if (!haySonidosReales(kit)) await cargarBateria(contexto, kit)
+
+    caja.classList.add('figura__caja--sonando')
+    reproductor = crearReproductor(contexto, ejercicioDeFigura(ficha.figura, conSilencios), {
+      bpm: BPM,
+      loop: false,
+      conClick: true,
+      silenciarManos: false,
+      silenciarPies: false,
+      escucharYTocar: false,
+      volumenBateria: 0.9,
+      volumenClick: 0.5,
+      cuentaEntrada: 0,
+      entrenador: { activo: false, incremento: 0, cadaCompases: 0, bpmMeta: BPM },
+    })
+    reproductor.iniciar()
+
+    // Se apaga solo al acabar el compás (o los dos de la redonda).
+    const compases = ficha.figura === 'redonda' && conSilencios ? 2 : 1
+    window.setTimeout(
+      () => caja.classList.remove('figura__caja--sonando'),
+      (compases * 4 * 60_000) / BPM + 200,
+    )
+  }
+
+  raiz.addEventListener('click', (evento) => {
+    const caja = (evento.target as HTMLElement).closest<HTMLButtonElement>('.figura__caja')
+    if (caja) void escuchar(caja)
+  })
+
+  return detener
+}

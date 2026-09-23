@@ -19,7 +19,7 @@ import {
   Tuplet,
   Voice,
 } from 'vexflow/bravura'
-import type { Ejercicio, Nota, Pieza } from '../ejercicios/tipos'
+import type { Ejercicio, Figura, Nota, Pieza } from '../ejercicios/tipos'
 import { esSilencio, ticksDeNota, ticksPorPulso } from '../ejercicios/tipos'
 import { SITIO } from './piezas'
 
@@ -574,4 +574,71 @@ export function dibujarLeyenda(
       alTocar?.(pieza)
     })
   }
+}
+
+/**
+ * Dibuja una figura suelta (o su silencio), sin pentagrama detrás: solo el
+ * símbolo, como en una tabla de figuras.
+ *
+ * Todas salen del mismo tamaño y centradas. Para eso se mide lo que ocupó el
+ * dibujo y se recorta una ventana fija alrededor de su centro, en vez de
+ * dejar que el navegador estire cada símbolo hasta llenar su recuadro: una
+ * redonda es ancha y baja y una corchea alta y estrecha, y estiradas no habría
+ * forma de comparar sus tamaños.
+ */
+export function dibujarFigura(
+  contenedor: HTMLDivElement,
+  figura: Figura,
+  opciones: { silencio?: boolean; unidas?: number } = {},
+): void {
+  const { silencio = false, unidas = 1 } = opciones
+  contenedor.innerHTML = ''
+
+  const LIENZO = 200 // sitio de sobra para dibujar; luego se recorta
+  const VENTANA_ANCHO = 88
+  const VENTANA_ALTO = 104
+  const PIXELES = 74 // ancho final en pantalla
+
+  const renderizador = new Renderer(contenedor, Renderer.Backends.SVG)
+  renderizador.resize(LIENZO, LIENZO)
+  const ctx = renderizador.getContext()
+
+  // Sin líneas, y sin dibujarlo: en una tabla de figuras el pentagrama no dice
+  // nada. El objeto hace falta igual porque es lo que sitúa las notas, pero si
+  // se dibuja deja las dos barras de los extremos y descentra el recorte.
+  const stave = new Stave(10, 10, LIENZO - 20, { numLines: 0 })
+  stave.setContext(ctx)
+
+  const duracion = DURACION[figura] + (silencio ? 'r' : '')
+  const notas = Array.from(
+    { length: silencio ? 1 : unidas },
+    () => new StaveNote({ keys: ['b/4'], duration: duracion, stemDirection: Stem.UP }),
+  )
+
+  const barras = notas.length > 1 ? Beam.generateBeams(notas) : []
+
+  const voz = new Voice({ numBeats: 4, beatValue: 4 })
+  voz.setMode(Voice.Mode.SOFT)
+  voz.addTickables(notas)
+  new Formatter().format([voz], 60)
+  voz.draw(ctx, stave)
+  for (const barra of barras) barra.setContext(ctx).draw()
+
+  const svg = contenedor.querySelector('svg')
+  if (!svg) return
+  const caja = svg.getBBox()
+  const cx = caja.x + caja.width / 2
+  const cy = caja.y + caja.height / 2
+  svg.setAttribute(
+    'viewBox',
+    `${cx - VENTANA_ANCHO / 2} ${cy - VENTANA_ALTO / 2} ${VENTANA_ANCHO} ${VENTANA_ALTO}`,
+  )
+  // Medida en píxeles, no en porcentaje: Safari no calcula bien el alto
+  // automático de un SVG con viewBox. Va en el estilo además de en el
+  // atributo porque VexFlow deja puesto un width/height en línea que gana.
+  const alto = Math.round((PIXELES * VENTANA_ALTO) / VENTANA_ANCHO)
+  svg.setAttribute('width', String(PIXELES))
+  svg.setAttribute('height', String(alto))
+  svg.style.width = `${PIXELES}px`
+  svg.style.height = `${alto}px`
 }
