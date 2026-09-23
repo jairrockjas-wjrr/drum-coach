@@ -132,8 +132,8 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
         ${icono('bucle')}<span>Loop</span>
       </button>
       <button class="tocar" id="tocar" aria-label="Reproducir">${icono('tocar')}</button>
-      <button class="icono icono--texto" id="parar" aria-label="Detener" disabled>
-        ${icono('parar')}<span>Stop</span>
+      <button class="icono icono--texto" id="pausa" aria-label="Pausa" disabled>
+        ${icono('pausa')}<span>Pausa</span>
       </button>
     </footer>
 
@@ -215,7 +215,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   const hoja = $<HTMLDivElement>('hoja')
   const lienzo = raiz.querySelector<HTMLElement>('.lienzo')!
   const botonTocar = $<HTMLButtonElement>('tocar')
-  const botonParar = $<HTMLButtonElement>('parar')
+  const botonPausa = $<HTMLButtonElement>('pausa')
   const botonLoop = $<HTMLButtonElement>('loop')
   const bpmNumero = $<HTMLElement>('bpm-numero')
   const bpmRango = $<HTMLInputElement>('bpm-rango')
@@ -288,7 +288,10 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       return
     }
     if (evento.tipo === 'click') {
-      const partes = [`Compás ${evento.compas + 1}`]
+      const partes = [
+        `${ejercicio!.compas.pulsos}/${ejercicio!.compas.figura}`,
+        `compás ${evento.compas + 1}`,
+      ]
       if (prefs.escucharYTocar) partes.push(evento.soloClick ? 'tu turno' : 'escucha')
       estado.textContent = partes.join(' · ')
       return
@@ -367,11 +370,22 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   }
 
   function bucleVisual(): void {
-    if (!contexto || !reproductor?.estaSonando()) return
+    if (!contexto) return
     const ahora = contexto.currentTime
     while (cola.length > 0 && cola[0].cuando <= ahora) pintarEvento(cola.shift()!)
     deslizarConLaMusica()
-    animacion = requestAnimationFrame(bucleVisual)
+
+    // Sin bucle, el reproductor se para en cuanto programa el último golpe,
+    // unos 100 ms antes de que suene. Aquí se sigue pintando hasta vaciar la
+    // cola, para que el último golpe también se marque en la partitura.
+    if (reproductor?.estaSonando() || cola.length > 0) {
+      animacion = requestAnimationFrame(bucleVisual)
+      return
+    }
+    if (!reproductor?.estaEnPausa()) {
+      estado.textContent = ejercicio!.descripcion
+      pintarTransporte()
+    }
   }
 
   // --- Opciones ---
@@ -392,13 +406,19 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     reproductor?.actualizar(opcionesActuales())
   }
 
-  /** Pone el botón grande en play o en pausa según lo que toque. */
+  /**
+   * El botón grande es reproducir/detener. El de al lado, pausa: para sin
+   * perder el sitio y vuelve a arrancar donde se quedó.
+   */
   function pintarTransporte(): void {
     const sonando = reproductor?.estaSonando() ?? false
-    botonTocar.innerHTML = icono(sonando ? 'pausa' : 'tocar')
-    botonTocar.setAttribute('aria-label', sonando ? 'Pausa' : 'Reproducir')
-    botonTocar.classList.toggle('tocar--pausa', sonando)
-    botonParar.disabled = !sonando && !(reproductor?.estaEnPausa() ?? false)
+    const enPausa = reproductor?.estaEnPausa() ?? false
+    botonTocar.innerHTML = icono(sonando || enPausa ? 'parar' : 'tocar')
+    botonTocar.setAttribute('aria-label', sonando || enPausa ? 'Detener' : 'Reproducir')
+    botonTocar.classList.toggle('tocar--parar', sonando || enPausa)
+    botonPausa.disabled = !sonando && !enPausa
+    botonPausa.classList.toggle('icono--activo', enPausa)
+    botonPausa.querySelector('span')!.textContent = enPausa ? 'Seguir' : 'Pausa'
   }
 
   /** Para del todo y vuelve al principio. */
@@ -413,20 +433,10 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     void soltarPantalla()
   }
 
-  /** Botón grande: reproduce, pausa y sigue desde donde se quedó. */
+  /** Botón grande: reproducir o detener del todo. */
   async function alternar(): Promise<void> {
-    if (reproductor?.estaSonando()) {
-      reproductor.pausar()
-      cancelAnimationFrame(animacion)
-      cola.length = 0
-      estado.textContent = 'En pausa'
-      pintarTransporte()
-      return
-    }
-    if (reproductor?.estaEnPausa()) {
-      reproductor.reanudar()
-      animacion = requestAnimationFrame(bucleVisual)
-      pintarTransporte()
+    if (reproductor?.estaSonando() || reproductor?.estaEnPausa()) {
+      detener()
       return
     }
     contexto = await desbloquearAudio()
@@ -458,7 +468,21 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
 
   // --- Conexiones ---
   botonTocar.addEventListener('click', () => void alternar())
-  botonParar.addEventListener('click', detener)
+
+  /** Pausa: se queda donde está y vuelve a arrancar en el mismo punto. */
+  botonPausa.addEventListener('click', () => {
+    if (!reproductor) return
+    if (reproductor.estaSonando()) {
+      reproductor.pausar()
+      cancelAnimationFrame(animacion)
+      cola.length = 0
+      estado.textContent = 'En pausa'
+    } else if (reproductor.estaEnPausa()) {
+      reproductor.reanudar()
+      animacion = requestAnimationFrame(bucleVisual)
+    }
+    pintarTransporte()
+  })
 
   botonLoop.addEventListener('click', () => {
     prefs.loop = !prefs.loop

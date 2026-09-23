@@ -667,9 +667,9 @@ a.barra__volver {
   transform: scale(0.94);
 }
 
-.tocar--pausa {
-  background: var(--acento-oscuro);
-  color: #1a0f02;
+.tocar--parar {
+  background: var(--error);
+  color: #2a0a0a;
 }
 
 .tocar--cargando {

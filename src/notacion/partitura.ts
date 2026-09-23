@@ -349,12 +349,13 @@ export function dibujarPartitura(
     const y = MARGEN_ARRIBA + desplazamiento + renglon * altoRenglon
 
     for (let i = desde; i < hasta; i++) {
-      // En la tira, cada copia del ejercicio empieza con clave y compás: así
-      // todas miden exactamente lo mismo y el salto de una vuelta a otra cae
-      // sobre el mismo dibujo, sin que se note.
+      // La clave y el compás se escriben una sola vez, al principio de todo.
+      // Aun así, TODAS las copias reservan ese mismo hueco al empezar: si no,
+      // medirían distinto y el salto de una vuelta a otra se notaría.
       const esInicioDeCopia = i % ejercicio.compases.length === 0
-      const conClave = unaLinea ? esInicioDeCopia : i === desde
-      const anchoCompas = anchoCompasBase + (conClave ? EXTRA_PRIMERO : 0)
+      const conHueco = unaLinea ? esInicioDeCopia : i === desde
+      const conClave = unaLinea ? i === 0 : i === desde
+      const anchoCompas = anchoCompasBase + (conHueco ? EXTRA_PRIMERO : 0)
       const stave = new Stave(x, y, anchoCompas)
 
       if (conClave) {
@@ -374,7 +375,7 @@ export function dibujarPartitura(
 
       const formateador = new Formatter()
       if (voces.length > 1) formateador.joinVoices(voces)
-      formateador.format(voces, anchoCompas - (conClave ? EXTRA_PRIMERO + 18 : 18))
+      formateador.format(voces, anchoCompas - (conHueco ? EXTRA_PRIMERO + 18 : 18))
       for (const voz of voces) voz.draw(ctx, stave)
       for (const adorno of adornos) adorno.setContext(ctx).draw()
 
