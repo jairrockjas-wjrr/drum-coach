@@ -62,6 +62,13 @@ export interface Reproductor {
   iniciar(): void
   detener(): void
   estaSonando(): boolean
+  /**
+   * En qué punto del ejercicio está la música en ese instante, medido en
+   * ticks desde el inicio de la vuelta. Sirve para mover la partitura de
+   * forma continua, pegada al sonido. Devuelve null si aún no ha empezado
+   * (cuenta de entrada) o está parado.
+   */
+  posicionEnTicks(tiempo: number): number | null
   cambiarBpm(bpm: number): void
   actualizar(opciones: OpcionesReproductor): void
   alEvento(escucha: (evento: EventoReproduccion) => void): void
@@ -279,6 +286,14 @@ export function crearReproductor(
     },
 
     estaSonando: () => sonando,
+
+    posicionEnTicks(tiempo: number): number | null {
+      if (!sonando) return null
+      const pulsos = (tiempo - origen) / duracionPulso()
+      const ticks = pulsos * porPulso
+      if (ticks < 0) return null
+      return ticks % ticksPasada
+    },
 
     cambiarBpm(nuevo: number): void {
       const anterior = opciones.bpm

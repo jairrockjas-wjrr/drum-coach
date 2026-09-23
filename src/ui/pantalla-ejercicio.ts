@@ -13,7 +13,14 @@ import {
 } from '../ejercicios/reproductor'
 import type { NotaDibujada } from '../notacion/partitura'
 import { ORDEN_LEYENDA } from '../notacion/piezas'
-import { NOMBRE_PIEZA, cargarBateria, haySonidosReales } from '../audio/bateria'
+import {
+  KITS,
+  KIT_POR_DEFECTO,
+  NOMBRE_PIEZA,
+  cargarBateria,
+  haySonidosReales,
+  type Kit,
+} from '../audio/bateria'
 import { BPM_MAXIMO, BPM_MINIMO } from '../metronomo/tipos'
 import { guardar, leer } from '../datos/preferencias'
 import { mantenerPantallaEncendida, soltarPantalla } from '../sistema/wake-lock'
@@ -31,6 +38,8 @@ interface Preferencias {
   cuentaEntrada: 0 | 1 | 2
   mostrarSticking: boolean
   mostrarConteo: boolean
+  /** Qué versión de la batería suena. */
+  kit: Kit
 }
 
 const POR_DEFECTO: Preferencias = {
@@ -44,6 +53,7 @@ const POR_DEFECTO: Preferencias = {
   cuentaEntrada: 1,
   mostrarSticking: true,
   mostrarConteo: true,
+  kit: KIT_POR_DEFECTO,
 }
 
 export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
@@ -64,7 +74,8 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   let animacion = 0
   let notas: NotaDibujada[] = []
   let porClave = new Map<string, NotaDibujada>()
-  let compasALaVista = -1
+  /** Dónde cae cada nota a lo largo de la tira, para deslizarla con la música. */
+  let posiciones: { ticks: number; x: number }[] = []
   const cola: EventoReproduccion[] = []
 
   const piezasUsadas = new Set<Pieza>()
@@ -134,6 +145,16 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
         ${ejercicio.consejo ? `<p class="nota">💡 ${ejercicio.consejo}</p>` : ''}
 
         <div class="campos">
+          <label class="campo">
+            <span>Sonido de la batería</span>
+            <select id="kit">
+              ${KITS.map(
+                (k) => `<option value="${k.id}" ${prefs.kit === k.id ? 'selected' : ''}>${k.nombre}</option>`,
+              ).join('')}
+            </select>
+          </label>
+          <p class="nota" id="kit-descripcion"></p>
+
           <label class="campo campo--interruptor">
             <span>Click del metrónomo</span>
             <input type="checkbox" id="con-click" ${prefs.conClick ? 'checked' : ''} />
@@ -218,7 +239,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     })
     porClave = new Map()
     for (const nota of notas) porClave.set(`${nota.compas}-${nota.voz}-${nota.indice}`, nota)
-    compasALaVista = -1
+    medirPosiciones()
     lienzo.scrollLeft = 0
   }
 
@@ -244,10 +265,6 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       const partes = [`Compás ${evento.compas + 1}`]
       if (prefs.escucharYTocar) partes.push(evento.soloClick ? 'tu turno' : 'escucha')
       estado.textContent = partes.join(' · ')
-      if (evento.compas !== compasALaVista) {
-        compasALaVista = evento.compas
-        centrarCompas(evento.compas)
-      }
       return
     }
 
@@ -265,22 +282,63 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
     }
   }
 
-  /** Desliza la tira para que el compás que suena quede a la vista. */
-  function centrarCompas(numero: number): void {
-    const primera = notas.find((n) => n.compas === numero && n.elemento)
-    if (!primera?.elemento) return
-    const caja = primera.elemento.getBoundingClientRect()
-    const marco = lienzo.getBoundingClientRect()
-    // Se deja el compás en el primer tercio: así se ve lo que viene después,
-    // que es lo que hace falta para leer a primera vista.
-    const objetivo = lienzo.scrollLeft + (caja.left - marco.left) - marco.width / 3
-    lienzo.scrollTo({ left: Math.max(0, objetivo), behavior: 'smooth' })
+  /**
+   * Apunta en qué x de la tira cae cada nota. Se mide una vez, al dibujar,
+   * y sirve para calcular en cada fotograma por dónde va la música.
+   */
+  function medirPosiciones(): void {
+    const origenHoja = hoja.getBoundingClientRect().left - hoja.scrollLeft
+    const puntos = new Map<number, number>()
+    for (const nota of notas) {
+      if (!nota.elemento || puntos.has(nota.ticks)) continue
+      const caja = nota.elemento.getBoundingClientRect()
+      puntos.set(nota.ticks, caja.left + caja.width / 2 - origenHoja + lienzo.scrollLeft)
+    }
+    posiciones = [...puntos.entries()]
+      .map(([ticks, x]) => ({ ticks, x }))
+      .sort((a, b) => a.ticks - b.ticks)
+  }
+
+  /** Dónde cae en la tira un punto cualquiera del ejercicio (interpolando). */
+  function xDeTicks(ticks: number): number | null {
+    if (posiciones.length < 2) return null
+    if (ticks <= posiciones[0].ticks) return posiciones[0].x
+    for (let i = 1; i < posiciones.length; i++) {
+      const anterior = posiciones[i - 1]
+      const actual = posiciones[i]
+      if (ticks <= actual.ticks) {
+        const avance = (ticks - anterior.ticks) / (actual.ticks - anterior.ticks)
+        return anterior.x + (actual.x - anterior.x) * avance
+      }
+    }
+    return posiciones[posiciones.length - 1].x
+  }
+
+  /**
+   * Desliza la tira pegada a la música, fotograma a fotograma, en vez de
+   * saltar de compás en compás: la partitura avanza contigo.
+   */
+  function deslizarConLaMusica(): void {
+    if (!contexto || !reproductor) return
+    const ticks = reproductor.posicionEnTicks(contexto.currentTime)
+    if (ticks === null) return
+    const x = xDeTicks(ticks)
+    if (x === null) return
+    // El punto que suena se mantiene en el primer tercio de la pantalla, para
+    // ver lo que viene.
+    const objetivo = Math.max(0, x - lienzo.clientWidth / 3)
+    // Al volver al principio del bucle el salto es grande: ahí se va de golpe.
+    lienzo.scrollLeft =
+      Math.abs(objetivo - lienzo.scrollLeft) > lienzo.clientWidth
+        ? objetivo
+        : lienzo.scrollLeft + (objetivo - lienzo.scrollLeft) * 0.35
   }
 
   function bucleVisual(): void {
     if (!contexto || !reproductor?.estaSonando()) return
     const ahora = contexto.currentTime
     while (cola.length > 0 && cola[0].cuando <= ahora) pintarEvento(cola.shift()!)
+    deslizarConLaMusica()
     animacion = requestAnimationFrame(bucleVisual)
   }
 
@@ -320,11 +378,11 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       return
     }
     contexto = await desbloquearAudio()
-    if (!haySonidosReales()) {
+    if (!haySonidosReales(prefs.kit)) {
       botonTocar.disabled = true
       botonTocar.classList.add('tocar--cargando')
       estado.textContent = 'Cargando la batería…'
-      await cargarBateria(contexto)
+      await cargarBateria(contexto, prefs.kit)
       botonTocar.classList.remove('tocar--cargando')
       botonTocar.disabled = false
     }
@@ -408,6 +466,26 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
   casilla('escuchar', (v) => (prefs.escucharYTocar = v))
   casilla('ver-sticking', (v) => (prefs.mostrarSticking = v), true)
   casilla('ver-conteo', (v) => (prefs.mostrarConteo = v), true)
+
+  // --- Sonido de la batería ---
+  const kitDescripcion = $<HTMLElement>('kit-descripcion')
+  function pintarKit(): void {
+    kitDescripcion.textContent = KITS.find((k) => k.id === prefs.kit)?.descripcion ?? ''
+  }
+  pintarKit()
+
+  $<HTMLSelectElement>('kit').addEventListener('change', async (e) => {
+    prefs.kit = (e.target as HTMLSelectElement).value as Kit
+    pintarKit()
+    guardarPrefs()
+    // Se cambia al vuelo: si está sonando, se para para no cortar a medias.
+    if (reproductor?.estaSonando()) detener()
+    if (contexto) {
+      kitDescripcion.textContent = 'Cargando el kit…'
+      await cargarBateria(contexto, prefs.kit)
+      pintarKit()
+    }
+  })
 
   $<HTMLSelectElement>('entrada').addEventListener('change', (e) => {
     prefs.cuentaEntrada = Number((e.target as HTMLSelectElement).value) as 0 | 1 | 2

@@ -36,31 +36,68 @@ const ARCHIVOS: Record<Pieza, { archivo: string; velocidad?: number }> = {
   tomPiso: { archivo: 'tomMedio', velocidad: 0.88 },
 }
 
-const sonidos = new Map<string, AudioBuffer>()
-let cargando: Promise<void> | null = null
+/**
+ * La misma batería, tratada de tres maneras. Se elige desde los ajustes y solo
+ * se descarga la elegida. Ver public/sonidos/CREDITOS.md.
+ */
+export const KITS = [
+  {
+    id: 'rock',
+    nombre: 'Rock grande',
+    descripcion: 'Gordo y seco. Tambores afinados abajo y bien comprimidos.',
+  },
+  {
+    id: 'estudio',
+    nombre: 'Estudio seco',
+    descripcion: 'Más apretado y con más ataque, menos grave.',
+  },
+  {
+    id: 'natural',
+    nombre: 'Natural',
+    descripcion: 'Casi sin tocar: la batería como se grabó, con su resonancia.',
+  },
+] as const
 
-/** ¿Están listos los sonidos reales? */
-export const haySonidosReales = (): boolean => sonidos.size > 0
+export type Kit = (typeof KITS)[number]['id']
+export const KIT_POR_DEFECTO: Kit = 'rock'
+
+const sonidos = new Map<string, AudioBuffer>()
+let kitCargado: Kit | null = null
+let cargando: { kit: Kit; promesa: Promise<void> } | null = null
+
+/** ¿Están listos los sonidos reales de ese kit? */
+export const haySonidosReales = (kit: Kit): boolean => kitCargado === kit
 
 /**
- * Descarga y prepara los sonidos de la batería. Se puede llamar varias veces:
- * solo descarga la primera. Si falla, la app sigue con la batería sintetizada.
+ * Descarga y prepara los sonidos del kit elegido. Si ya están, no hace nada.
+ * Si falla, la app sigue con la batería sintetizada en vez de quedarse muda.
  */
-export function cargarBateria(contexto: AudioContext): Promise<void> {
-  if (cargando) return cargando
+export function cargarBateria(contexto: AudioContext, kit: Kit): Promise<void> {
+  if (kitCargado === kit) return Promise.resolve()
+  if (cargando?.kit === kit) return cargando.promesa
+
   const nombres = [...new Set(Object.values(ARCHIVOS).map((a) => a.archivo))]
-  cargando = Promise.all(
+  const promesa = Promise.all(
     nombres.map(async (nombre) => {
-      try {
-        const respuesta = await fetch(`${import.meta.env.BASE_URL}sonidos/${nombre}.m4a`)
-        if (!respuesta.ok) throw new Error(`no se pudo bajar ${nombre}`)
-        sonidos.set(nombre, await contexto.decodeAudioData(await respuesta.arrayBuffer()))
-      } catch (error) {
-        console.warn('Sonido no disponible, se usará el sintetizado:', nombre, error)
-      }
+      const respuesta = await fetch(`${import.meta.env.BASE_URL}sonidos/${kit}/${nombre}.m4a`)
+      if (!respuesta.ok) throw new Error(`no se pudo bajar ${nombre}`)
+      return [nombre, await contexto.decodeAudioData(await respuesta.arrayBuffer())] as const
     }),
-  ).then(() => undefined)
-  return cargando
+  )
+    .then((cargados) => {
+      sonidos.clear()
+      for (const [nombre, sonido] of cargados) sonidos.set(nombre, sonido)
+      kitCargado = kit
+    })
+    .catch((error) => {
+      console.warn('No se pudo cargar el kit, se usará el sintetizado:', kit, error)
+    })
+    .finally(() => {
+      cargando = null
+    })
+
+  cargando = { kit, promesa }
+  return promesa
 }
 
 /** Ruido blanco reutilizable: generarlo en cada golpe sería un desperdicio. */

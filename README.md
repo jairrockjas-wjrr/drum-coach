@@ -88,7 +88,10 @@ solo al abrir un ejercicio: la app arranca con 13 KB.
 
 Son grabaciones de una batería real: pack **Virtuosity Drums** de Versilian
 Studios, licencia **CC0 1.0** (dominio público). Ver `public/sonidos/CREDITOS.md`.
-Pesan 218 KB en total. Para regenerarlos:
+
+La misma grabación se prepara en tres kits (**Rock grande**, **Estudio seco** y
+**Natural**), que se eligen desde los ajustes del ejercicio; solo se descarga el
+elegido, entre 144 y 200 KB. Para regenerarlos:
 
 ```bash
 npm run samples

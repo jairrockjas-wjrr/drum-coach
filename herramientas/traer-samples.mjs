@@ -259,6 +259,65 @@ const PIEZAS = {
   },
 }
 
+/**
+ * Variantes del kit. Son la misma grabación tratada de tres maneras, para que
+ * Jair elija la que le suene bien desde los ajustes de la app.
+ *
+ *  afinacion: multiplica la de cada pieza (por encima de 1 = menos grave).
+ *  procesado: cuánto se aplica la ecualización de cada pieza (1 = entera).
+ *  puerta: multiplica la caída (por encima de 1 = deja resonar más).
+ *  saturacion: multiplica la saturación.
+ *  compresion: multiplica el ratio del compresor.
+ */
+const KITS = {
+  rock: {
+    nombre: 'Rock grande',
+    descripcion: 'Gordo y seco. Tambores afinados abajo y bien comprimidos.',
+    afinacion: 1,
+    procesado: 1,
+    puerta: 1,
+    saturacion: 1,
+    compresion: 1,
+  },
+  estudio: {
+    nombre: 'Estudio seco',
+    descripcion: 'Más apretado y con más ataque, menos grave. Sonido de disco.',
+    afinacion: 1.07,
+    procesado: 0.85,
+    puerta: 0.7,
+    saturacion: 0.8,
+    compresion: 1.1,
+  },
+  natural: {
+    nombre: 'Natural',
+    descripcion: 'Casi sin tocar: la batería como se grabó, con su resonancia.',
+    afinacion: 1.14,
+    procesado: 0.3,
+    puerta: 2.4,
+    saturacion: 0.25,
+    compresion: 0.6,
+  },
+}
+
+/** Aplica una variante a la receta de una pieza. */
+function aplicarKit(receta, kit) {
+  return {
+    ...receta,
+    afinacion: Math.min(1.05, receta.afinacion * kit.afinacion),
+    eq: receta.eq.map((banda) => ({ ...banda, db: (banda.db ?? 0) * kit.procesado })),
+    compresor: {
+      ...receta.compresor,
+      ratio: Math.max(1.2, receta.compresor.ratio * kit.compresion),
+      compensarDb: (receta.compresor.compensarDb ?? 0) * kit.procesado,
+    },
+    puerta: {
+      mantenerMs: receta.puerta.mantenerMs,
+      caidaMs: Math.round(receta.puerta.caidaMs * kit.puerta),
+    },
+    saturacion: receta.saturacion * kit.saturacion,
+  }
+}
+
 /** Elige el archivo que mejor encaja con la fuerza pedida, en un micrófono. */
 function elegir(archivos, micro, carpeta, articulacion, fuerza) {
   const prefijo = `Samples/${micro}/${carpeta}/${micro}_${carpeta}_${articulacion}_`
@@ -326,8 +385,8 @@ let bajado = 0
 const resumen = []
 
 for (const [pieza, receta] of Object.entries(PIEZAS)) {
+  // --- Las capas se bajan una sola vez y sirven para las tres variantes ---
   const pistas = []
-
   for (const [micro, peso] of receta.capas) {
     const entrada = elegir(archivos, micro, receta.carpeta, receta.articulacion, receta.fuerza)
     bajado += entrada.comprimido
@@ -335,7 +394,7 @@ for (const [pieza, receta] of Object.entries(PIEZAS)) {
     const wav = new URL(`${pieza}-${micro}.wav`, TEMPORAL)
     writeFileSync(flac, await traerArchivo(PACK, entrada))
     execFileSync('afconvert', ['-f', 'WAVE', '-d', 'LEI16@44100', '-c', '1', flac.pathname, wav.pathname])
-    pistas.push({ micro, peso, muestras: leerWav(wav.pathname), origen: entrada.nombre.split('/').pop() })
+    pistas.push({ peso, muestras: leerWav(wav.pathname), origen: entrada.nombre.split('/').pop() })
   }
 
   // El golpe empieza donde lo marca el micrófono principal. El mismo recorte se
@@ -350,51 +409,51 @@ for (const [pieza, receta] of Object.entries(PIEZAS)) {
     Math.round(44100 * receta.segundos),
     ...pistas.map((p) => p.muestras.length - desde),
   )
-
   const mezcla = new Float32Array(largo)
   for (const pista of pistas) {
     for (let i = 0; i < largo; i++) mezcla[i] += pista.muestras[desde + i] * pista.peso
   }
 
-  // --- Procesado de estudio ---
-  // Primero se deja la mezcla a un nivel de trabajo, para que el compresor
-  // encuentre la señal donde espera, y al final se pone el volumen del kit.
-  let señal = nivelar(mezcla, 0.7)
-  señal = afinar(señal, receta.afinacion)
-  señal = ecualizar(señal, receta.eq)
-  señal = comprimir(señal, receta.compresor)
-  // La puerta va después del compresor: comprimir levanta la cola, y es
-  // justo esa cola la que hay que apagar para que el golpe suene seco.
-  señal = acortar(señal, receta.puerta)
-  señal = saturar(señal, receta.saturacion)
-  señal = nivelar(señal, receta.nivel)
-  señal = fundirFinal(señal, 0.03)
+  const linea = [pieza.padEnd(14)]
 
-  const wavFinal = new URL(`${pieza}.wav`, TEMPORAL)
-  const m4a = new URL(`${pieza}.m4a`, DESTINO)
-  escribirWav(wavFinal.pathname, señal)
-  execFileSync('afconvert', ['-f', 'm4af', '-d', 'aac', '-b', '128000', wavFinal.pathname, m4a.pathname])
+  for (const [id, kit] of Object.entries(KITS)) {
+    const ajustada = aplicarKit(receta, kit)
+    mkdirSync(new URL(`${id}/`, DESTINO), { recursive: true })
 
-  const tamano = readFileSync(m4a).length
-  resumen.push({
-    pieza,
-    origen: pistas[0].origen,
-    micros: receta.capas.map(([m, p]) => `${m} ${Math.round(p * 100)} %`).join(' + '),
-    proceso: `afinación ${receta.afinacion} · ${receta.eq.length} filtros · comp ${
-      receta.compresor.ratio
-    }:1 · puerta ${receta.puerta.mantenerMs}+${receta.puerta.caidaMs} ms`,
-    duracion: largo / 44100,
-    nivel: receta.nivel,
-    tamano,
-  })
-  console.log(
-    `  ${pieza.padEnd(14)} ${receta.capas.map(([m]) => m).join('+').padEnd(18)} nivel ${String(
-      receta.nivel,
-    ).padEnd(5)} ${(largo / 44100).toFixed(2)} s  ${(tamano / 1024).toFixed(0)} KB`,
-  )
+    // --- Procesado de estudio ---
+    // Primero se deja la mezcla a un nivel de trabajo, para que el compresor
+    // encuentre la señal donde espera, y al final se pone el volumen del kit.
+    let señal = nivelar(mezcla, 0.7)
+    señal = afinar(señal, ajustada.afinacion)
+    señal = ecualizar(señal, ajustada.eq)
+    señal = comprimir(señal, ajustada.compresor)
+    // La puerta va después del compresor: comprimir levanta la cola, y es
+    // justo esa cola la que hay que apagar para que el golpe suene seco.
+    señal = acortar(señal, ajustada.puerta)
+    señal = saturar(señal, ajustada.saturacion)
+    señal = nivelar(señal, receta.nivel)
+    señal = fundirFinal(señal, 0.03)
+
+    const wavFinal = new URL(`${pieza}-${id}.wav`, TEMPORAL)
+    const m4a = new URL(`${id}/${pieza}.m4a`, DESTINO)
+    escribirWav(wavFinal.pathname, señal)
+    execFileSync('afconvert', ['-f', 'm4af', '-d', 'aac', '-b', '128000', wavFinal.pathname, m4a.pathname])
+
+    const tamano = readFileSync(m4a).length
+    resumen.push({ kit: id, pieza, tamano, duracion: señal.length / 44100 })
+    linea.push(`${id} ${(señal.length / 44100).toFixed(2)}s/${(tamano / 1024).toFixed(0)}KB`)
+  }
+
+  console.log('  ' + linea.join('  '))
 }
 
 rmSync(TEMPORAL, { recursive: true, force: true })
+
+const porKit = Object.keys(KITS).map((id) => ({
+  id,
+  ...KITS[id],
+  tamano: resumen.filter((r) => r.kit === id).reduce((t, r) => t + r.tamano, 0),
+}))
 
 const creditos = `# Sonidos de la batería
 
@@ -416,33 +475,35 @@ aéreos el aire y los platillos. El recorte del silencio inicial se calcula con 
 micrófono principal y se aplica igual a todas las capas, para no perder el
 desfase natural entre micrófonos.
 
-Cada pieza se deja además a su volumen natural dentro del kit (columna "nivel"):
-si todas se normalizaran al máximo, el hi-hat sonaría tan fuerte como el bombo.
-
 ## Procesado
 
 Los samples crudos suenan a grabación de sala, no a disco. Cada pieza pasa por
-la misma cadena que usaría un ingeniero al mezclar: ecualización propia (quitar
-el "cartón" de los toms, sacar el golpe del bombo, el crack de la tarola),
+la misma cadena que usaría un ingeniero al mezclar: ecualización propia,
 compresión para darle pegada, una puerta que apaga la resonancia (el golpe
 suena seco, como un tambor con trapo) y una pizca de saturación. A los tambores
 se les baja además la afinación: el pack es un kit de jazz, con tambores chicos
 y agudos, y bajarlos los convierte en un kit más grande. Está todo en
 \`herramientas/audio-dsp.mjs\`.
 
+Los platillos van hacia las referencias que pidió Jair: un hi-hat de 14"
+Traditional y un Zildjian 20" K Constantinople (oscuros, nada brillantes).
+
+## Variantes
+
+La misma grabación sale en tres kits; se elige desde los ajustes de la app y
+solo se descarga el elegido.
+
+| Kit | Cómo suena | Pesa |
+|---|---|---|
+${porKit.map((k) => `| **${k.nombre}** (\`${k.id}\`) | ${k.descripcion} | ${(k.tamano / 1024).toFixed(0)} KB |`).join('\n')}
+
 Todo acaba en mono 44,1 kHz y AAC (.m4a), que es lo que reproduce Safari en iPhone.
 
 Para regenerarlos: \`npm run samples\`.
-
-| Pieza | Micrófonos | Procesado | Nivel | Duración | Tamaño |
-|---|---|---|---|---|---|
-${resumen.map((r) => `| ${r.pieza} | ${r.micros} | ${r.proceso} | ${r.nivel} | ${r.duracion.toFixed(2)} s | ${(r.tamano / 1024).toFixed(0)} KB |`).join('\n')}
-
-El tom de piso no tiene sample propio: el pack solo trae dos toms, así que se
-reproduce el tom grave con la afinación bajada.
 `
 writeFileSync(new URL('CREDITOS.md', DESTINO), creditos)
 
-const totalKb = resumen.reduce((t, r) => t + r.tamano, 0) / 1024
 console.log(`\nBajados ${(bajado / 1e6).toFixed(1)} MB del pack.`)
-console.log(`Sonidos listos en public/sonidos/: ${totalKb.toFixed(0)} KB en total.`)
+for (const kit of porKit) {
+  console.log(`  ${kit.nombre.padEnd(14)} ${(kit.tamano / 1024).toFixed(0)} KB`)
+}

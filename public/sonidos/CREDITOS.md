@@ -18,38 +18,30 @@ aéreos el aire y los platillos. El recorte del silencio inicial se calcula con 
 micrófono principal y se aplica igual a todas las capas, para no perder el
 desfase natural entre micrófonos.
 
-Cada pieza se deja además a su volumen natural dentro del kit (columna "nivel"):
-si todas se normalizaran al máximo, el hi-hat sonaría tan fuerte como el bombo.
-
 ## Procesado
 
 Los samples crudos suenan a grabación de sala, no a disco. Cada pieza pasa por
-la misma cadena que usaría un ingeniero al mezclar: ecualización propia (quitar
-el "cartón" de los toms, sacar el golpe del bombo, el crack de la tarola),
+la misma cadena que usaría un ingeniero al mezclar: ecualización propia,
 compresión para darle pegada, una puerta que apaga la resonancia (el golpe
 suena seco, como un tambor con trapo) y una pizca de saturación. A los tambores
 se les baja además la afinación: el pack es un kit de jazz, con tambores chicos
 y agudos, y bajarlos los convierte en un kit más grande. Está todo en
 `herramientas/audio-dsp.mjs`.
 
+Los platillos van hacia las referencias que pidió Jair: un hi-hat de 14"
+Traditional y un Zildjian 20" K Constantinople (oscuros, nada brillantes).
+
+## Variantes
+
+La misma grabación sale en tres kits; se elige desde los ajustes de la app y
+solo se descarga el elegido.
+
+| Kit | Cómo suena | Pesa |
+|---|---|---|
+| **Rock grande** (`rock`) | Gordo y seco. Tambores afinados abajo y bien comprimidos. | 162 KB |
+| **Estudio seco** (`estudio`) | Más apretado y con más ataque, menos grave. Sonido de disco. | 144 KB |
+| **Natural** (`natural`) | Casi sin tocar: la batería como se grabó, con su resonancia. | 200 KB |
+
 Todo acaba en mono 44,1 kHz y AAC (.m4a), que es lo que reproduce Safari en iPhone.
 
 Para regenerarlos: `npm run samples`.
-
-| Pieza | Micrófonos | Procesado | Nivel | Duración | Tamaño |
-|---|---|---|---|---|---|
-| bombo | kickmic 100 % + mid 30 % | afinación 0.78 · 5 filtros · comp 5:1 · puerta 95+320 ms | 0.94 | 0.90 s | 8 KB |
-| tarola | snaremic 100 % + oh 30 % + room 12 % | afinación 0.88 · 4 filtros · comp 5:1 · puerta 70+320 ms | 0.92 | 0.90 s | 9 KB |
-| tarolaAro | snaremic 100 % + oh 30 % + room 14 % | afinación 0.88 · 4 filtros · comp 5:1 · puerta 70+310 ms | 0.95 | 0.90 s | 9 KB |
-| aro | snaremic 100 % + oh 20 % | afinación 0.95 · 3 filtros · comp 3:1 · puerta 25+110 ms | 0.52 | 0.60 s | 6 KB |
-| hiHatCerrado | oh 100 % + snaremic 30 % | afinación 0.95 · 4 filtros · comp 2.5:1 · puerta 30+150 ms | 0.4 | 0.45 s | 7 KB |
-| hiHatAbierto | oh 100 % + snaremic 25 % + room 10 % | afinación 0.95 · 3 filtros · comp 2.5:1 · puerta 260+600 ms | 0.5 | 1.20 s | 15 KB |
-| hiHatPedal | oh 100 % + snaremic 30 % | afinación 0.95 · 2 filtros · comp 3:1 · puerta 25+130 ms | 0.3 | 0.45 s | 6 KB |
-| ride | oh 100 % + mid 30 % + room 10 % | afinación 0.9 · 4 filtros · comp 2.5:1 · puerta 700+600 ms | 0.48 | 1.80 s | 22 KB |
-| campana | oh 100 % + mid 30 % + room 10 % | afinación 0.9 · 3 filtros · comp 3:1 · puerta 700+600 ms | 0.56 | 1.50 s | 22 KB |
-| crash | oh 100 % + mid 35 % + room 20 % | afinación 0.92 · 3 filtros · comp 2:1 · puerta 1400+900 ms | 0.78 | 2.40 s | 37 KB |
-| tomAgudo | mid 100 % + oh 40 % + room 16 % | afinación 0.78 · 5 filtros · comp 5:1 · puerta 115+460 ms | 0.85 | 1.30 s | 10 KB |
-| tomMedio | mid 100 % + oh 40 % + room 16 % | afinación 0.77 · 5 filtros · comp 5:1 · puerta 135+560 ms | 0.88 | 1.50 s | 11 KB |
-
-El tom de piso no tiene sample propio: el pack solo trae dos toms, así que se
-reproduce el tom grave con la afinación bajada.
