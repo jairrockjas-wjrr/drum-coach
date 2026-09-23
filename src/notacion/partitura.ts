@@ -393,8 +393,11 @@ export function dibujarPartitura(
       // El tamaño de la tira se ata a lo que se ve: se busca que entre un
       // compás completo y un poco del siguiente, que es lo que hace falta para
       // leer a primera vista. De ahí sale el alto, y el ancho por proporción.
-      const escala = ancho / (anchoCompasBase * 1.15)
-      const altura = Math.min((alto ?? 320) - 28, Math.max(140, altoLienzo * escala))
+      const escala = ancho / anchoCompasBase
+      // Nunca por debajo de 220 px: con compases muy llenos el sticking y el
+      // conteo quedaban ilegibles. Como la tira avanza sola, no pasa nada por
+      // que no quepa el compás entero.
+      const altura = Math.min((alto ?? 320) - 24, Math.max(220, altoLienzo * escala))
       svg.style.height = `${Math.round(altura)}px`
       svg.style.width = `${Math.round((altura * anchoLienzo) / altoLienzo)}px`
     } else {
