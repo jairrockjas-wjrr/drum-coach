@@ -116,11 +116,14 @@ const PIEZAS = {
     articulacion: 'closed',
     capas: [['oh', 1], ['snaremic', 0.3]],
     fuerza: 0.8,
-    afinacion: 1,
+    // Referencia de Jair: hi-hat de 14" Traditional. Oscuro, con cuerpo,
+    // sin el siseo agudo de un hi-hat brillante.
+    afinacion: 0.95,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 260 },
-      { tipo: 'pico', frecuencia: 1200, q: 1, db: -2 },
-      { tipo: 'agudos', frecuencia: 9000, db: -1 }, // sin estridencia
+      { tipo: 'pasaaltos', frecuencia: 230 },
+      { tipo: 'pico', frecuencia: 900, q: 1.1, db: 2 }, // cuerpo del plato
+      { tipo: 'pico', frecuencia: 3500, q: 1, db: -2 },
+      { tipo: 'agudos', frecuencia: 9000, db: -5 }, // fuera el siseo
     ],
     compresor: { umbralDb: -22, ratio: 2.5, ataqueMs: 2, soltarMs: 80, compensarDb: 1.5 },
     puerta: { mantenerMs: 30, caidaMs: 150 },
@@ -133,10 +136,11 @@ const PIEZAS = {
     articulacion: 'open',
     capas: [['oh', 1], ['snaremic', 0.25], ['room', 0.1]],
     fuerza: 0.8,
-    afinacion: 1,
+    afinacion: 0.95,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 250 },
-      { tipo: 'agudos', frecuencia: 8500, db: 0 },
+      { tipo: 'pasaaltos', frecuencia: 220 },
+      { tipo: 'pico', frecuencia: 900, q: 1.1, db: 2 },
+      { tipo: 'agudos', frecuencia: 8500, db: -5 },
     ],
     compresor: { umbralDb: -24, ratio: 2.5, ataqueMs: 3, soltarMs: 180, compensarDb: 1.5 },
     puerta: { mantenerMs: 260, caidaMs: 600 },
@@ -149,10 +153,10 @@ const PIEZAS = {
     articulacion: 'pedal',
     capas: [['oh', 1], ['snaremic', 0.3]],
     fuerza: 0.8,
-    afinacion: 1,
+    afinacion: 0.95,
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 220 },
-      { tipo: 'agudos', frecuencia: 7000, db: -2 },
+      { tipo: 'pasaaltos', frecuencia: 200 },
+      { tipo: 'agudos', frecuencia: 7000, db: -5 },
     ],
     compresor: { umbralDb: -22, ratio: 3, ataqueMs: 2, soltarMs: 70, compensarDb: 1.5 },
     puerta: { mantenerMs: 25, caidaMs: 130 },
@@ -165,15 +169,18 @@ const PIEZAS = {
     articulacion: 'ride',
     capas: [['oh', 1], ['mid', 0.3], ['room', 0.1]],
     fuerza: 0.7,
-    afinacion: 1,
+    // Referencia de Jair: Zildjian 20" K Constantinople. Un ride oscuro y
+    // seco, con la baqueta muy clara y poco lavado brillante.
+    afinacion: 0.9, // un plato más grande suena más grave
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 200 },
-      { tipo: 'pico', frecuencia: 2800, q: 1.2, db: 2 }, // el "ping"
-      { tipo: 'agudos', frecuencia: 9500, db: 0 },
+      { tipo: 'pasaaltos', frecuencia: 180 },
+      { tipo: 'pico', frecuencia: 2600, q: 1.4, db: 3 }, // la baqueta
+      { tipo: 'pico', frecuencia: 5200, q: 1, db: -3 }, // quita el filo
+      { tipo: 'agudos', frecuencia: 8000, db: -6 }, // oscuro
     ],
     compresor: { umbralDb: -24, ratio: 2.5, ataqueMs: 3, soltarMs: 220, compensarDb: 2 },
-    // Los platillos sí resuenan: solo se les recorta el final.
-    puerta: { mantenerMs: 900, caidaMs: 700 },
+    // Los platillos sí resuenan, pero un K se controla solo: cola corta.
+    puerta: { mantenerMs: 700, caidaMs: 600 },
     saturacion: 0.12,
     nivel: 0.48,
     segundos: 1.8,
@@ -183,11 +190,11 @@ const PIEZAS = {
     articulacion: 'bell',
     capas: [['oh', 1], ['mid', 0.3], ['room', 0.1]],
     fuerza: 0.8,
-    afinacion: 1,
+    afinacion: 0.9, // la campana del mismo ride
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 220 },
-      { tipo: 'pico', frecuencia: 2200, q: 1.5, db: 3 },
-      { tipo: 'agudos', frecuencia: 8000, db: -1 },
+      { tipo: 'pasaaltos', frecuencia: 200 },
+      { tipo: 'pico', frecuencia: 2000, q: 1.5, db: 4 },
+      { tipo: 'agudos', frecuencia: 8000, db: -4 },
     ],
     compresor: { umbralDb: -24, ratio: 3, ataqueMs: 3, soltarMs: 200, compensarDb: 2 },
     puerta: { mantenerMs: 700, caidaMs: 600 },
@@ -200,11 +207,11 @@ const PIEZAS = {
     articulacion: 'crash',
     capas: [['oh', 1], ['mid', 0.35], ['room', 0.2]],
     fuerza: 0.85,
-    afinacion: 1,
+    afinacion: 0.92, // plato más grande, más grave
     eq: [
-      { tipo: 'pasaaltos', frecuencia: 150 },
+      { tipo: 'pasaaltos', frecuencia: 140 },
       { tipo: 'pico', frecuencia: 800, q: 1, db: -2 },
-      { tipo: 'agudos', frecuencia: 8000, db: 0 },
+      { tipo: 'agudos', frecuencia: 8500, db: -4 },
     ],
     compresor: { umbralDb: -26, ratio: 2, ataqueMs: 5, soltarMs: 400, compensarDb: 2 },
     puerta: { mantenerMs: 1400, caidaMs: 900 },
