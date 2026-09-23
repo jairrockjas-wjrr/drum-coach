@@ -198,7 +198,10 @@ export function dibujarPartitura(
   // línea de abajo cae a 80 px del inicio del renglón. Debajo van todavía el
   // corchete del tresillo (26) y las dos filas de texto (hasta 49).
   const ALTO_RENGLON = 215
-  const EXTRA_PRIMERO = 62 // lo que ocupan la clave y el compás
+  const EXTRA_PRIMERO = 62 // lo que ocupan la clave y el compás de VexFlow
+  // En la tira las cifras las dibujamos nosotros y son más chicas, así que la
+  // cabecera necesita bastante menos sitio.
+  const ANCHO_CABECERA = 46
   const AIRE = 34 // espacio de respeto a cada lado de la música
 
   // --- Primera pasada: armar la música y preguntarle a VexFlow cuánto sitio
@@ -352,7 +355,7 @@ export function dibujarPartitura(
     // compases de música no cambian de ancho y la partitura tiene un
     // principio claro en vez de arrancar a media vuelta.
     if (unaLinea) {
-      const cabecera = new Stave(x, y, EXTRA_PRIMERO)
+      const cabecera = new Stave(x, y, ANCHO_CABECERA)
       cabecera.addClef('percussion')
       cabecera.setContext(ctx).draw()
 
@@ -362,13 +365,13 @@ export function dibujarPartitura(
       if (svgCabecera) {
         // Las líneas del pentagrama caen en y+40, 50, 60, 70 y 80. Las cifras
         // van pegadas a las dos de en medio, como en las partituras impresas.
-        const xCompas = x + 46
+        const xCompas = x + 34
         // La de arriba centrada en la segunda línea (y+50) y la de abajo en la
         // cuarta (y+70): es donde van en una partitura impresa.
         crearTexto(svgCabecera, xCompas, y + 56, String(ejercicio.compas.pulsos), 'compas-cifra')
         crearTexto(svgCabecera, xCompas, y + 76, String(ejercicio.compas.figura), 'compas-cifra')
       }
-      x += EXTRA_PRIMERO
+      x += ANCHO_CABECERA
     }
 
     for (let i = desde; i < hasta; i++) {
