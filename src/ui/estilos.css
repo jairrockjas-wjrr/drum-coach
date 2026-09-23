@@ -965,15 +965,15 @@ a.barra__volver {
 /* Número del compás, arriba a la izquierda de cada uno. Se renumera en cada
    vuelta para que la cuenta sea corrida. */
 .numero-compas {
-  font: 600 11px system-ui, -apple-system, sans-serif;
-  fill: #9aa3b2;
+  font: 700 12px system-ui, -apple-system, sans-serif;
+  fill: #7b1220; /* rojo vino */
   text-anchor: start;
 }
 
 /* Las cifras del compás en la partitura: las de VexFlow salen enormes al
    agrandar la tira, así que se dibujan aparte y a su tamaño. */
 .compas-cifra {
-  font: 700 17px system-ui, -apple-system, sans-serif;
+  font: 700 16px system-ui, -apple-system, sans-serif;
   fill: #1f2937;
   text-anchor: middle;
 }

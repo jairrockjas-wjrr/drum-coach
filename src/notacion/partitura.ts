@@ -360,9 +360,11 @@ export function dibujarPartitura(
       // agrandar la tira. Las líneas del pentagrama van de y+40 a y+80.
       const svgCabecera = contenedor.querySelector('svg')
       if (svgCabecera) {
+        // Las líneas del pentagrama caen en y+40, 50, 60, 70 y 80. Las cifras
+        // van pegadas a las dos de en medio, como en las partituras impresas.
         const xCompas = x + 46
-        crearTexto(svgCabecera, xCompas, y + 58, String(ejercicio.compas.pulsos), 'compas-cifra')
-        crearTexto(svgCabecera, xCompas, y + 78, String(ejercicio.compas.figura), 'compas-cifra')
+        crearTexto(svgCabecera, xCompas, y + 55, String(ejercicio.compas.pulsos), 'compas-cifra')
+        crearTexto(svgCabecera, xCompas, y + 73, String(ejercicio.compas.figura), 'compas-cifra')
       }
       x += EXTRA_PRIMERO
     }
