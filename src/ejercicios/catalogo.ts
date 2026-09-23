@@ -63,30 +63,32 @@ export const EJERCICIOS: Ejercicio[] = [
     nivel: 1,
     compas: CUATRO_CUARTOS,
     bpmSugerido: 60,
-    descripcion: 'Recorre el kit entero, una pieza por tiempo, de arriba abajo del pentagrama.',
+    descripcion: 'Recorre el kit entero, un golpe en cada tiempo, de arriba abajo del pentagrama.',
     consejo: 'Mira dónde se escribe cada una mientras suena: eso es lo que hay que memorizar.',
+    // Todo va en negras y ningún tiempo queda mudo: la idea es oír una pieza a
+    // la vez, bien separada de la siguiente. Por eso este ejercicio tampoco
+    // lleva remate al final, que metería dos golpes por tiempo.
     compases: [
       // Los platillos, que son lo que está más arriba.
       {
         manos: [negra(['crash']), negra(['hiHatCerrado']), negra(['hiHatAbierto']), negra(['ride'])],
         pies: [],
       },
-      // La campana y los toms.
+      // La campana y los toms, bajando.
       {
         manos: [negra(['campana']), negra(['tomAgudo']), negra(['tomMedio']), negra(['tomPiso'])],
         pies: [],
       },
-      // La tarola y sus dos formas de golpearla.
+      // La tarola y sus tres formas de golpearla, y el bombo entrando al final.
       {
         manos: [negra(['tarola']), negra(['aro']), negra(['tarolaAro']), calla('negra')],
-        pies: [],
+        pies: [calla('negra'), calla('negra'), calla('negra'), negra(['bombo'])],
       },
-      // Y lo que se toca con los pies, que se escribe por debajo.
+      // Los pies, que se escriben por debajo, y un crash para cerrar.
       {
-        manos: [],
-        pies: [negra(['bombo']), calla('negra'), negra(['hiHatPedal']), calla('negra')],
+        manos: [calla('negra'), calla('negra'), calla('negra'), negra(['crash'])],
+        pies: [negra(['bombo']), negra(['hiHatPedal']), negra(['bombo']), calla('negra')],
       },
-      remate(2),
     ],
   },
 

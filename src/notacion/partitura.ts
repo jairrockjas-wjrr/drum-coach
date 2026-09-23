@@ -486,6 +486,7 @@ export function dibujarPartitura(
  *
  * Los dibujos llevan medida en píxeles, no en porcentaje: Safari no calcula
  * bien el alto automático de un SVG con viewBox y se salían de su recuadro.
+ * Todos miden lo mismo siempre, tocados o no, para que la rejilla no se mueva.
  * Se usan redondas (sin plica) para que se vea solo la cabeza de la nota, que
  * es lo que distingue una pieza de otra.
  */
@@ -502,8 +503,7 @@ export function dibujarLeyenda(
   // abajo el hi-hat de pie (otros 20), así que el recuadro necesita 116.
   const ANCHO = 108
   const ALTO = 116
-  const CHICO = 92 // píxeles del dibujo en la rejilla
-  const GRANDE = 190 // al tocarlo
+  const DIBUJO = 92 // píxeles del dibujo: siempre el mismo, no crece al tocarlo
 
   for (const pieza of piezas) {
     const fila = document.createElement('button')
@@ -542,17 +542,18 @@ export function dibujarLeyenda(
     const svg = dibujo.querySelector('svg')
     if (svg) {
       svg.setAttribute('viewBox', `0 0 ${ANCHO} ${ALTO}`)
-      const medir = (anchoPx: number): void => {
-        svg.setAttribute('width', String(anchoPx))
-        svg.setAttribute('height', String(Math.round((anchoPx * ALTO) / ANCHO)))
-      }
-      medir(CHICO)
-
-      fila.addEventListener('click', () => {
-        const grande = fila.classList.toggle('leyenda__fila--grande')
-        medir(grande ? GRANDE : CHICO)
-        alTocar?.(pieza)
-      })
+      svg.setAttribute('width', String(DIBUJO))
+      svg.setAttribute('height', String(Math.round((DIBUJO * ALTO) / ANCHO)))
     }
+
+    // Al tocarla solo se enciende un momento: si cambiara de tamaño movería
+    // todo lo demás de sitio y se pierde de vista la que estabas mirando.
+    let apagar: number | undefined
+    fila.addEventListener('click', () => {
+      fila.classList.add('leyenda__fila--sonando')
+      clearTimeout(apagar)
+      apagar = window.setTimeout(() => fila.classList.remove('leyenda__fila--sonando'), 320)
+      alTocar?.(pieza)
+    })
   }
 }

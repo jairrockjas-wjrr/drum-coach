@@ -890,7 +890,7 @@ a.barra__volver {
 }
 
 /* --- Leyenda dibujada: cada pieza con su nota de verdad.
-       Se toca para verla en grande y oírla. --- */
+       Se toca para oírla; el recuadro no cambia de tamaño. --- */
 .leyenda {
   display: flex;
   flex-wrap: wrap;
@@ -916,10 +916,10 @@ a.barra__volver {
   border-color: var(--acento);
 }
 
-/* Al tocarla ocupa todo el ancho y el dibujo se agranda. */
-.leyenda__fila--grande {
-  flex-basis: 100%;
+/* Al tocarla se enciende un momento, sin cambiar de tamaño. */
+.leyenda__fila--sonando {
   border-color: var(--acento);
+  background: color-mix(in srgb, var(--acento) 16%, var(--superficie-alta));
 }
 
 .leyenda__dibujo {
@@ -937,11 +937,6 @@ a.barra__volver {
 .leyenda__nombre {
   flex: 1;
   min-width: 0;
-}
-
-.leyenda__fila--grande .leyenda__nombre {
-  font-size: 17px;
-  font-weight: 600;
 }
 
 /* --- Sticking y conteo debajo de las notas --- */

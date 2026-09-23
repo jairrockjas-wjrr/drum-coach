@@ -328,7 +328,7 @@ export function montarEjercicio(raiz: HTMLElement, id: string): () => void {
       $<HTMLDivElement>('leyenda'),
       ORDEN_LEYENDA.filter((p) => piezasUsadas.has(p)),
       NOMBRE_PIEZA,
-      // Al tocar una pieza de la leyenda, además de agrandarse, suena.
+      // Al tocar una pieza de la leyenda, suena.
       (pieza) => void sonarPieza(pieza),
     )
   }
