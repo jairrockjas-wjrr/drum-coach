@@ -121,8 +121,8 @@ export function montarLeccion(raiz: HTMLElement, id: string): () => void {
              <small>${siguiente.resumen}</small>
            </a>`
         : `<a class="boton modulo modulo--listo" href="#/lectura">
-             <span>Has llegado al final</span>
-             <small>Vuelve a la ruta para repasar lo que quieras</small>
+             <span>Siguiente: los ritmos para tocar</span>
+             <small>Rock, funk y swing, al final de la ruta</small>
            </a>`
     }
   `

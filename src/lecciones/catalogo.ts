@@ -86,12 +86,14 @@ export const LECCIONES: Leccion[] = [
 
   {
     id: 'negras',
-    titulo: '2. El pulso y las negras',
-    resumen: 'Una nota por tiempo. Contar 1, 2, 3, 4 en voz alta.',
+    titulo: '2. Las negras y sus silencios',
+    resumen: 'Una nota por tiempo, y el hueco que también se cuenta.',
     texto: [
       'El pulso es eso que marcas con el pie cuando escuchas una canción. En 4/4 hay cuatro pulsos por compás, y los cuentas 1, 2, 3, 4.',
-      'La negra es la figura que dura justo un pulso: una nota, un tiempo. Es la que ves en el ejemplo, una por cada número.',
+      'La negra es la figura que dura justo un pulso: una nota, un tiempo. Es la que ves en el primer ejemplo, una por cada número.',
       'Lo importante desde el primer día: cuenta en voz alta mientras tocas. No es un capricho de profesor, es lo que hace que el pulso deje de depender de la vista y se te meta en el cuerpo.',
+      'El silencio de negra dura lo mismo que la negra, un pulso, pero no se toca. En música el silencio no es "no hay nada": es una figura más, con su duración exacta.',
+      'El error clásico al empezar es dejar de contar cuando no tocas. No lo hagas: el conteo sigue corriendo, 1, 2, 3, 4, toques o no toques. En el segundo ejemplo suenan el 1 y el 3, y el 2 y el 4 se cuentan igual.',
       'Debajo de cada nota, la app te escribe el conteo. Léelo mientras suena y verás cómo cuadra.',
     ],
     ejemplos: [
@@ -104,20 +106,6 @@ export const LECCIONES: Leccion[] = [
           { manos: veces(4, (i) => negra(['tarola'], { mano: alternando(i) })), pies: [] },
         ],
       },
-    ],
-    practica: ['lectura-negras'],
-  },
-
-  {
-    id: 'silencios',
-    titulo: '3. Los silencios',
-    resumen: 'El silencio también se escribe, y también hay que contarlo.',
-    texto: [
-      'En música el silencio no es "no hay nada": es una figura más, con su duración exacta. El silencio de negra dura un pulso, igual que la negra.',
-      'El error clásico al empezar es dejar de contar cuando no tocas. No lo hagas: el conteo sigue corriendo, 1, 2, 3, 4, toques o no toques.',
-      'En el ejemplo tocas el 1 y el 3, y callas el 2 y el 4. Si lo cuentas en voz alta te va a salir a la primera; si no lo cuentas, se te va a ir.',
-    ],
-    ejemplos: [
       {
         titulo: 'Tocar y callar',
         pie: 'Suenan el 1 y el 3. El 2 y el 4 se cuentan igual.',
@@ -136,12 +124,12 @@ export const LECCIONES: Leccion[] = [
         ],
       },
     ],
-    practica: ['silencios-negras'],
+    practica: ['lectura-negras', 'silencios-negras'],
   },
 
   {
     id: 'corcheas',
-    titulo: '4. Las corcheas',
+    titulo: '3. Las corcheas',
     resumen: 'Dos notas por tiempo. Aquí aparece la palabra "y".',
     texto: [
       'La corchea dura media negra: entran dos en cada pulso. Se cuentan "1 y 2 y 3 y 4 y", donde el número es el pulso y la "y" cae justo en medio.',
@@ -183,7 +171,7 @@ export const LECCIONES: Leccion[] = [
 
   {
     id: 'semicorcheas',
-    titulo: '5. Las semicorcheas',
+    titulo: '4. Las semicorcheas',
     resumen: 'Cuatro notas por tiempo: el conteo completo, 1 e y a.',
     texto: [
       'La semicorchea dura media corchea: entran cuatro en cada pulso. Se cuentan "1 e y a", y esas cuatro sílabas son la base para leer casi todo el funk y el rock moderno.',
@@ -215,7 +203,7 @@ export const LECCIONES: Leccion[] = [
 
   {
     id: 'mezclar',
-    titulo: '6. Cambiar de figura sin perder el pulso',
+    titulo: '5. Cambiar de figura sin perder el pulso',
     resumen: 'Lo que de verdad cuesta al leer: los cambios.',
     texto: [
       'Ya sabes leer negras, corcheas y semicorcheas por separado. Lo que cuesta es cambiar de una a otra sin que se mueva el pulso, y eso es justo lo que hace un compás de música de verdad.',
@@ -247,7 +235,7 @@ export const LECCIONES: Leccion[] = [
 
   {
     id: 'tresillos',
-    titulo: '7. Los tresillos',
+    titulo: '6. Los tresillos',
     resumen: 'Tres notas parejas dentro de un solo tiempo.',
     texto: [
       'Hasta ahora los tiempos se partían en dos o en cuatro. El tresillo los parte en tres: tres notas iguales dentro de un pulso.',
@@ -271,7 +259,7 @@ export const LECCIONES: Leccion[] = [
 
   {
     id: 'swing',
-    titulo: '8. El swing',
+    titulo: '7. El swing',
     resumen: 'Por qué el jazz no se toca recto, y cómo se escribe.',
     texto: [
       'Swinguear es tocar las dos corcheas de cada tiempo desiguales: la primera larga y la segunda corta y tarde. Es lo que hace que el ride suene "chín, chi-kí" en vez de "chin-chin".',
@@ -307,7 +295,7 @@ export const LECCIONES: Leccion[] = [
 
   {
     id: 'todo-junto',
-    titulo: '9. Todo junto',
+    titulo: '8. Todo junto',
     resumen: 'Leer un groove de verdad: manos y pies a la vez.',
     texto: [
       'Hasta aquí has leído una sola voz. Un groove lleva dos: lo que hacen las manos, con las plicas hacia arriba, y lo que hacen los pies, hacia abajo.',
@@ -333,3 +321,12 @@ export const LECCIONES: Leccion[] = [
     practica: ['rock-basico', 'funk-semicorcheas'],
   },
 ]
+
+/**
+ * Los ritmos de verdad, al final de la ruta.
+ *
+ * No son lecciones de lectura: son los tres grooves que se tocan de tantas
+ * canciones. Van en su propia sección porque a estas alturas ya no estás
+ * aprendiendo a leer una figura, estás tocando.
+ */
+export const GROOVES: string[] = ['rock-basico', 'funk-semicorcheas', 'jazz-ride-swing']

@@ -1,6 +1,7 @@
 // Ruta de lecciones de lectura, en orden, con las que ya has dado marcadas.
 
-import { LECCIONES } from '../lecciones/catalogo'
+import { GROOVES, LECCIONES } from '../lecciones/catalogo'
+import { EJERCICIOS } from '../ejercicios/catalogo'
 import { leer } from '../datos/preferencias'
 
 export const CLAVE_HECHAS = 'lecciones'
@@ -12,6 +13,9 @@ export interface Hechas {
 export function montarLectura(raiz: HTMLElement): void {
   const hechas = leer<Hechas>(CLAVE_HECHAS, {})
   const cuantas = LECCIONES.filter((l) => hechas[l.id]).length
+  const grooves = GROOVES.map((id) => EJERCICIOS.find((e) => e.id === id)).filter(
+    (e): e is NonNullable<typeof e> => Boolean(e),
+  )
 
   raiz.innerHTML = `
     <header class="barra">
@@ -35,6 +39,25 @@ export function montarLectura(raiz: HTMLElement): void {
             <small>${leccion.resumen}</small>
           </a>`,
         ).join('')}
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <h2>Ritmos para tocar</h2>
+      <p class="nota">
+        Cuando ya leas lo de arriba, aquí no se aprende una figura nueva: se toca.
+        Son los tres ritmos que salen en media discografía.
+      </p>
+      <div class="modulos">
+        ${grooves
+          .map(
+            (ejercicio) => `
+          <a class="boton modulo modulo--listo" href="#/ejercicio/${ejercicio.id}?desde=/lectura">
+            <span>${ejercicio.titulo}</span>
+            <small>${ejercicio.descripcion}</small>
+          </a>`,
+          )
+          .join('')}
       </div>
     </section>
   `

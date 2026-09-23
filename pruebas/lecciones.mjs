@@ -3,7 +3,7 @@
 // Se ejecuta con: npm run prueba:lecciones (y en cada compilación).
 
 import assert from 'node:assert/strict'
-import { LECCIONES } from '../src/lecciones/catalogo.ts'
+import { GROOVES, LECCIONES } from '../src/lecciones/catalogo.ts'
 import { EJERCICIOS } from '../src/ejercicios/catalogo.ts'
 import { revisarEjercicio } from '../src/ejercicios/validador.ts'
 
@@ -46,10 +46,18 @@ for (const leccion of LECCIONES) {
 
 // Y al revés: ya no hay lista suelta de ejercicios, así que uno que no cuelgue
 // de ninguna lección se queda sin forma de llegar a él.
-const usados = new Set(LECCIONES.flatMap((l) => l.practica))
+const usados = new Set([...LECCIONES.flatMap((l) => l.practica), ...GROOVES])
 for (const ejercicio of EJERCICIOS) {
   if (!usados.has(ejercicio.id)) {
-    problemas.push(`el ejercicio "${ejercicio.id}" no aparece en ninguna lección: no hay cómo llegar a él`)
+    problemas.push(
+      `el ejercicio "${ejercicio.id}" no aparece en ninguna lección ni en los ritmos: no hay cómo llegar a él`,
+    )
+  }
+}
+
+for (const id of GROOVES) {
+  if (!EJERCICIOS.some((e) => e.id === id)) {
+    problemas.push(`los ritmos mandan al ejercicio "${id}", que no existe`)
   }
 }
 
