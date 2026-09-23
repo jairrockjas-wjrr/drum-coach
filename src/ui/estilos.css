@@ -259,6 +259,8 @@ button {
 }
 
 .barra__volver {
+  flex: none;
+  white-space: nowrap;
   min-height: 48px;
   padding: 8px 14px 8px 8px;
   background: none;
@@ -272,6 +274,14 @@ button {
 .barra__titulo {
   font-size: 20px;
   font-weight: 700;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+@media (max-width: 420px) {
+  .barra__titulo {
+    font-size: 17px;
+  }
 }
 
 /* --- Bloque de práctica --- */
@@ -315,7 +325,7 @@ button {
 .bpm__valor strong {
   display: block;
   /* Se encoge en pantallas angostas para que quepan 3 cifras y los 4 botones. */
-  font-size: clamp(40px, 13vw, 64px);
+  font-size: clamp(34px, 11vw, 64px);
   font-weight: 700;
   font-variant-numeric: tabular-nums; /* el número no baila al cambiar */
   letter-spacing: -2px;
