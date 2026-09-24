@@ -12,6 +12,7 @@ import {
   type Reproductor,
 } from '../ejercicios/reproductor'
 import type { NotaDibujada } from '../notacion/partitura'
+import type { Ejercicio } from '../ejercicios/tipos'
 import { ORDEN_LEYENDA } from '../notacion/piezas'
 import {
   KITS,
@@ -77,12 +78,18 @@ const POR_DEFECTO: Preferencias = {
   sincronia: 0,
 }
 
-export function montarEjercicio(raiz: HTMLElement, id: string, desde = ''): () => void {
+export function montarEjercicio(
+  raiz: HTMLElement,
+  id: string,
+  desde = '',
+  // Las partituras tuyas no están en el catálogo: llegan ya hechas.
+  ejercicioDado?: Ejercicio,
+): () => void {
   // De dónde vino: si entraste desde una lección, el botón de volver regresa a
   // esa lección. Si no, a la ruta de lecciones, que es de donde se llega.
   const atras = desde.startsWith('/') ? `#${desde}` : '#/lectura'
 
-  const ejercicio = EJERCICIOS.find((e) => e.id === id)
+  const ejercicio = ejercicioDado ?? EJERCICIOS.find((e) => e.id === id)
   if (!ejercicio) {
     raiz.innerHTML = `
       <header class="barra"><a class="barra__volver" href="${atras}">‹ Volver</a></header>

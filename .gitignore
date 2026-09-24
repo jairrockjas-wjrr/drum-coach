@@ -2,3 +2,9 @@ node_modules/
 dist/
 .DS_Store
 *.log
+
+# Partituras privadas: lo que copias de tus libros se queda en tu teléfono y,
+# si alguna vez se vuelca a un archivo, no entra aquí. El repositorio es
+# público y eso sería redistribuir material ajeno.
+mis-partituras/
+*.partitura.json

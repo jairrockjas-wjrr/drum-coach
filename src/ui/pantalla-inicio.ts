@@ -46,7 +46,11 @@ const MODULOS: Modulo[] = [
     ruta: '#/lectura',
   },
   { nombre: 'Generador de remates', nota: 'próxima fase · fills nuevos cada vez' },
-  { nombre: 'Generador de partitura', nota: 'en proceso' },
+  {
+    nombre: 'Mis partituras',
+    nota: 'copia una página de tu libro y escúchala · solo en este teléfono',
+    ruta: '#/taller',
+  },
 ]
 
 export function montarPantallaInicio(raiz: HTMLElement): void {

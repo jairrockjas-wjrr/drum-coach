@@ -1090,3 +1090,117 @@ a.barra__volver {
 .figura__lienzo svg {
   display: block;
 }
+
+/* --- Taller: la rejilla donde copias la página --- */
+.campo {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--superficie-alta);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--texto);
+  font: inherit;
+  margin-bottom: 10px;
+}
+
+.taller__barra {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 10px 0;
+  color: var(--texto-suave);
+  font-size: 14px;
+}
+
+.boton--chico {
+  width: auto;
+  padding: 6px 12px;
+  font-size: 14px;
+  margin: 0;
+}
+
+.taller__foto {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* La foto de la página: se mira mientras copias, y puede ser larga. */
+.taller__imagen {
+  width: 100%;
+  max-height: 44vh;
+  object-fit: contain;
+  object-position: top;
+  background: #fbfbfa;
+  border-radius: 12px;
+}
+
+.rejilla {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.rejilla__fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rejilla__nombre {
+  flex: none;
+  width: 92px;
+  font-size: 12px;
+  color: var(--texto-suave);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rejilla__casillas {
+  display: flex;
+  gap: 2px;
+}
+
+.casilla {
+  width: 18px;
+  height: 30px;
+  flex: none;
+  background: var(--superficie-alta);
+  border: 1px solid var(--borde);
+  border-radius: 4px;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* La primera casilla de cada tiempo se marca: si no, se pierde la cuenta. */
+.casilla--tiempo {
+  border-left-color: var(--texto-suave);
+}
+
+.casilla--on {
+  background: var(--acento);
+  border-color: var(--acento);
+}
+
+.piezas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pieza {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  background: var(--superficie-alta);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 6px 10px;
+}
