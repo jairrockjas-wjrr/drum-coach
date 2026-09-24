@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Prueba del lector de hojas</title>
+    <style>
+      body { font: 15px system-ui, sans-serif; margin: 20px; background: #111; color: #eee; }
+      h1 { font-size: 20px; }
+      .hoja { margin: 24px 0; border-top: 1px solid #333; padding-top: 16px; }
+      canvas { max-width: 100%; border: 1px solid #333; background: #fff; }
+      table { border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+      td, th { border: 1px solid #333; padding: 3px 8px; text-align: right; }
+      th { text-align: left; }
+      .bien { color: #7dd87d; }
+      .mal { color: #ff8a8a; }
+    </style>
+  </head>
+  <body>
+    <h1>Lector de hojas: qué encuentra y qué no</h1>
+    <p>
+      Encima de cada hoja se dibuja lo detectado: rojo las líneas del
+      pentagrama, azul las barras de compás, verde las cabezas de nota.
+    </p>
+    <div id="salida">Cargando…</div>
+
+    <script type="module">
+      import { binarizar, buscarRenglones, buscarBarras, buscarCabezas } from '/src/taller/lector.ts'
+
+      const HOJAS = ['25.png', '26.png', '27.png', '28.jpg', '29.jpg', '30.jpg']
+      const salida = document.querySelector('#salida')
+      salida.textContent = ''
+
+      // Lo que se ve a ojo en cada hoja, para comparar.
+      const ESPERADO = {
+        '25.png': { renglones: 8, nota: 'Reading Practice #2' },
+        '26.png': { renglones: 8, nota: 'Reading Practice #3' },
+        '27.png': { renglones: 8, nota: 'Rock Patterns 2 bar' },
+        '28.jpg': { renglones: 8, nota: 'Reading Practice #1' },
+        '29.jpg': { renglones: 8, nota: 'Basic Rock Sheet 2' },
+        '30.jpg': { renglones: 8, nota: 'Basic Rock Sheet 1' },
+      }
+
+      for (const nombre of HOJAS) {
+        const caja = document.createElement('div')
+        caja.className = 'hoja'
+        caja.innerHTML = `<h2>${nombre}</h2><p>Midiendo…</p>`
+        salida.append(caja)
+
+        const img = new Image()
+        img.src = `/pruebas/hojas/${nombre}`
+        await new Promise((listo, falla) => {
+          img.onload = listo
+          img.onerror = () => falla(new Error('no se pudo abrir ' + nombre))
+        })
+
+        // Se reduce a un ancho manejable: con 2000 px de ancho el recorrido de
+        // manchas tarda una eternidad y no hace falta tanto detalle.
+        const escala = Math.min(1, 1100 / img.naturalWidth)
+        const ancho = Math.round(img.naturalWidth * escala)
+        const alto = Math.round(img.naturalHeight * escala)
+
+        const lienzo = document.createElement('canvas')
+        lienzo.width = ancho
+        lienzo.height = alto
+        const ctx = lienzo.getContext('2d', { willReadFrequently: true })
+        ctx.drawImage(img, 0, 0, ancho, alto)
+
+        const t0 = performance.now()
+        const mapa = binarizar(ctx.getImageData(0, 0, ancho, alto))
+        const renglones = buscarRenglones(mapa)
+        const filas = renglones.map((renglon) => {
+          const barras = buscarBarras(mapa, renglon)
+          // Se empieza a mirar después de la barra inicial, pero solo si de
+          // verdad está al principio: en algunas hojas la de la izquierda no
+          // se detecta y la primera encontrada es la del final, y entonces
+          // saltarse todo lo anterior deja el renglón vacío.
+          const ancho = renglon.x1 - renglon.x0
+          const desdeX =
+            barras.length > 0 && barras[0] - renglon.x0 < ancho * 0.25
+              ? barras[0] + renglon.separacion * 1.5
+              : renglon.x0
+          const cabezas = buscarCabezas(mapa, renglon, desdeX)
+          return { renglon, barras, cabezas }
+        })
+        const tardo = Math.round(performance.now() - t0)
+
+        // Dibujo de lo encontrado.
+        for (const { renglon, barras, cabezas } of filas) {
+          ctx.strokeStyle = 'rgba(220,0,0,.55)'
+          ctx.lineWidth = 1
+          for (const y of renglon.lineas) {
+            ctx.beginPath()
+            ctx.moveTo(renglon.x0, y)
+            ctx.lineTo(renglon.x1, y)
+            ctx.stroke()
+          }
+          ctx.strokeStyle = 'rgba(0,90,255,.8)'
+          ctx.lineWidth = 2
+          for (const x of barras) {
+            ctx.beginPath()
+            ctx.moveTo(x, renglon.lineas[0] - 6)
+            ctx.lineTo(x, renglon.lineas[4] + 6)
+            ctx.stroke()
+          }
+          ctx.strokeStyle = 'rgba(0,170,0,.9)'
+          ctx.lineWidth = 1.5
+          for (const c of cabezas) {
+            ctx.strokeRect(c.x - c.ancho / 2, c.y - c.alto / 2, c.ancho, c.alto)
+          }
+        }
+
+        const totalCabezas = filas.reduce((t, f) => t + f.cabezas.length, 0)
+        const esperado = ESPERADO[nombre]
+        const bienRenglones = renglones.length === esperado.renglones
+
+        caja.innerHTML = `
+          <h2>${nombre} <small>${esperado.nota}</small></h2>
+          <p>
+            Renglones: <b class="${bienRenglones ? 'bien' : 'mal'}">${renglones.length}</b>
+            de ${esperado.renglones} ·
+            cabezas de nota: <b>${totalCabezas}</b> ·
+            ${tardo} ms
+          </p>
+          <table>
+            <tr><th>Renglón</th><th>Separación</th><th>Barras</th><th>Cabezas</th></tr>
+            ${filas
+              .map(
+                (f, i) =>
+                  `<tr><th>${i + 1}</th><td>${f.renglon.separacion.toFixed(1)}</td><td>${
+                    f.barras.length
+                  }</td><td>${f.cabezas.length}</td></tr>`,
+              )
+              .join('')}
+          </table>
+        `
+        caja.append(lienzo)
+      }
+    </script>
+  </body>
+</html>

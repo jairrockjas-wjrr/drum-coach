@@ -8,3 +8,7 @@ dist/
 # público y eso sería redistribuir material ajeno.
 mis-partituras/
 *.partitura.json
+
+# Hojas tuyas usadas como banco de pruebas del lector. Son material con
+# copyright: se quedan en tu máquina, no en el repositorio.
+pruebas/hojas/
